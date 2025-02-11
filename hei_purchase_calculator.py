@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
 import datetime
 
 def calculate_forecast(home_value, appreciation, origination_date, months=120):
@@ -29,9 +30,10 @@ st.title("HEI Forecast Calculator")
 # Primary inputs
 home_value = st.number_input("Home Value ($)", value=1000000.0, step=1000.0)
 
-# Appreciation is entered as a whole number percentage (e.g., 3 for 3%)
+# Appreciation entered as a whole number percentage (e.g., 3 for 3%)
 appreciation_input = st.number_input("Appreciation Rate (Annual %)", value=3.0, step=0.1)
-appreciation = appreciation_input / 100.0  # Convert to decimal
+# Convert to decimal
+appreciation = appreciation_input / 100.0
 
 origination_date = st.date_input("Origination Date", value=datetime.date(2023, 12, 11))
 
@@ -41,7 +43,8 @@ multiplier = st.number_input("Multiplier", value=2.0, step=0.1)
 
 # Investor Cap input (entered as a whole number percentage, default is 20%)
 investor_cap_input = st.number_input("Investor Cap (%)", value=20.0, step=0.1)
-investor_cap = investor_cap_input / 100.0  # Convert to decimal
+# Convert to decimal
+investor_cap = investor_cap_input / 100.0
 
 if st.button("Generate 120-Month Forecast"):
     # Generate the forecast table out to 120 months.
@@ -73,14 +76,13 @@ if st.button("Generate 120-Month Forecast"):
         axis=1
     )
     
-    # Add the Settlement Value column.
-    # Settlement Value = min(Contract Value, Investor Cap)
-    forecast_df["Settlement Value"] = forecast_df.apply(
-        lambda row: min(row["Contract Value"], row["Investor Cap"]),
-        axis=1
-    )
+    # Add the Settlement Value column using NumPy's minimum:
+    forecast_df["Settlement Value"] = np.minimum(forecast_df["Contract Value"], forecast_df["Investor Cap"])
     
-    # Reorder the columns for display: Month (index), Date, Home Value, Contract Value, Investor Cap, Acquisition Premium, Settlement Value
+    # Debug: Output the columns to verify "Settlement Value" is present.
+    st.write("Columns in DataFrame:", list(forecast_df.columns))
+    
+    # Reorder the columns for display:
     forecast_df = forecast_df[["Date", "Home Value", "Contract Value", "Investor Cap", "Acquisition Premium", "Settlement Value"]]
     
     st.write("### 120-Month HEI Forecast")
