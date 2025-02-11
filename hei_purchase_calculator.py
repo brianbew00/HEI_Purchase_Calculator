@@ -99,7 +99,7 @@ if submitted:
         "Investor Cap Value": "Investor Cap"
     }, inplace=True)
     
-    # Add Acquisition Premium (for display purposes; calculated from Option & Investor Inputs):
+    # Add Acquisition Premium:
     # Acquisition Premium = max(1 - (Investor Cap / Contract Value), 0)
     forecast_df["Acquisition Premium"] = forecast_df.apply(
         lambda row: max(1 - (row["Investor Cap"] / row["Contract Value"]), 0),
@@ -113,6 +113,7 @@ if submitted:
     # Compute Acquisition Values:
     # Secondary Market Value - Acquisition = Settlement Value * (1 + Acquisition Premium/Discount)
     forecast_df["Secondary Market Value - Acquisition"] = forecast_df["Settlement Value"] * (1 + acq_premium)
+    # Initialize Acquisition Investment column with 0.
     forecast_df["Secondary Market Investment (Acquisition)"] = 0.0
     if acq_method == "Contract Age (months)":
         target_month_acq = int(sec_contract_age)
@@ -127,9 +128,11 @@ if submitted:
     # Compute Disposition Values:
     # Secondary Market Value (Disposition) = Settlement Value * (1 + Disposition Premium/Discount)
     forecast_df["Secondary Market Value (Disposition)"] = forecast_df["Settlement Value"] * (1 + disp_premium)
+    # Initialize Disposition Investment column with 0.
     forecast_df["Secondary Market Investment (Disposition)"] = 0.0
     if disp_method == "Hold Period (months)":
-        target_month_disp = int(hold_period_months)
+        # The hold period is in addition to the acquisition contract age.
+        target_month_disp = int(target_month_acq) + int(hold_period_months)
     else:
         forecast_dates = pd.to_datetime(forecast_df["Date"], format="%m/%d/%Y")
         target_month_disp = forecast_dates[forecast_dates >= pd.to_datetime(sale_date)].index.min()
