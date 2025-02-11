@@ -105,7 +105,7 @@ if submitted:
     # = Settlement Value * (1 + Premium/Discount)
     forecast_df["Secondary Market Value - Acquisition"] = forecast_df["Settlement Value"] * (1 + premium_discount)
     
-    # Add the new column: Secondary Market Investment (Acquisition)
+    # Add new column: Secondary Market Investment (Acquisition)
     # Initialize with 0 for all rows.
     forecast_df["Secondary Market Investment (Acquisition)"] = 0.0
     
@@ -136,11 +136,36 @@ if submitted:
     ]
     forecast_df = forecast_df[final_cols]
     
-    # Use the native Streamlit table display.
+    # Apply formatting using the Pandas Styler.
+    styled_df = forecast_df.style.format({
+        "Home Value": "$ {:,.2f}",
+        "Contract Value": "$ {:,.2f}",
+        "Investor Cap": "$ {:,.2f}",
+        "Acquisition Premium": "{:.2%}",
+        "Settlement Value": "$ {:,.2f}",
+        "Secondary Market Value - Acquisition": "$ {:,.2f}",
+        "Secondary Market Investment (Acquisition)": "$ {:,.2f}"
+    }).set_sticky() \
+      .set_table_styles([{"selector": "th", "props": [("text-align", "center")]}])
+    
+    # To attempt equal distribution for the forecast columns (all except Date), list them:
+    forecast_cols = [
+        "Home Value", 
+        "Contract Value", 
+        "Investor Cap", 
+        "Acquisition Premium", 
+        "Settlement Value", 
+        "Secondary Market Value - Acquisition", 
+        "Secondary Market Investment (Acquisition)"
+    ]
+    # We use set_properties on these columns. Note that the native Streamlit viewer may adjust widths,
+    # but this encourages equal widths.
+    styled_df = styled_df.set_properties(subset=forecast_cols, **{
+        "min-width": "150px",
+        "width": "150px",
+        "max-width": "150px",
+        "text-align": "right"
+    })
+    
     st.write("### 120-Month HEI Forecast")
-    st.dataframe(
-        forecast_df.style
-            .set_sticky()  # makes headers sticky
-            .set_table_styles([{"selector": "th", "props": [("text-align", "center")]}]),
-        height=500, width=1000
-    )
+    st.dataframe(styled_df, height=500, width=1000)
