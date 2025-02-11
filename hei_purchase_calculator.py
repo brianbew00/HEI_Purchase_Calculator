@@ -52,7 +52,7 @@ with st.form(key="forecast_form"):
     with col1:
         premium_discount_input = st.number_input("Premium / Discount (%)", value=6.0, step=0.1)
     with col2:
-        st.write("")  # empty column for spacing
+        st.write("")  # for spacing
     premium_discount = premium_discount_input / 100.0
 
     st.subheader("Secondary Market Investment (Acquisition) Inputs")
@@ -106,8 +106,8 @@ if submitted:
     forecast_df["Secondary Market Value - Acquisition"] = forecast_df["Settlement Value"] * (1 + premium_discount)
     
     # Add the new column: Secondary Market Investment (Acquisition)
-    # Set it to blank (empty string) for all rows, then fill in the target row.
-    forecast_df["Secondary Market Investment (Acquisition)"] = ""
+    # Initialize with 0 (so that all non-target rows show 0)
+    forecast_df["Secondary Market Investment (Acquisition)"] = 0.0
     
     # Determine the target month:
     if sec_method == "Contract Age (months)":
