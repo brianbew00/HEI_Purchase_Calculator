@@ -5,7 +5,7 @@ import datetime
 
 def calculate_forecast(home_value, appreciation, origination_date, months=120):
     """
-    Forecast the home's value month-by-month using the formula:
+    Forecast the home's value month-by-month using:
       Home Value = home_value * (1 + appreciation)^(month / 12)
     where appreciation is in decimal form.
     
@@ -52,7 +52,7 @@ with st.form(key="forecast_form"):
     with col1:
         premium_discount_input = st.number_input("Premium / Discount (%)", value=6.0, step=0.1)
     with col2:
-        st.write("")  # for spacing
+        st.write("")  # spacer
     premium_discount = premium_discount_input / 100.0
 
     st.subheader("Secondary Market Investment (Acquisition) Inputs")
@@ -105,8 +105,8 @@ if submitted:
     # = Settlement Value * (1 + Premium/Discount)
     forecast_df["Secondary Market Value - Acquisition"] = forecast_df["Settlement Value"] * (1 + premium_discount)
     
-    # Add the new column: Secondary Market Investment (Acquisition)
-    # Initialize it with 0 for all rows.
+    # Add new column: Secondary Market Investment (Acquisition)
+    # Initialize with 0 for all rows.
     forecast_df["Secondary Market Investment (Acquisition)"] = 0.0
     
     # Determine the target month:
@@ -115,15 +115,15 @@ if submitted:
     else:
         # Convert the forecast dates (strings) back to datetime.
         forecast_dates = pd.to_datetime(forecast_df["Date"], format="%m/%d/%Y")
-        # Find the first index where forecast date >= secondary purchase date.
         target_month = forecast_dates[forecast_dates >= pd.to_datetime(sec_purchase_date)].index.min()
         if pd.isna(target_month):
             target_month = forecast_df.index[-1]
     
     # In the target month row, set the new column value to the Secondary Market Value - Acquisition.
-    forecast_df.loc[target_month, "Secondary Market Investment (Acquisition)"] = forecast_df.loc[target_month, "Secondary Market Value - Acquisition"]
+    forecast_df.loc[target_month, "Secondary Market Investment (Acquisition)"] = \
+        forecast_df.loc[target_month, "Secondary Market Value - Acquisition"]
     
-    # Reorder columns for display:
+    # Reorder columns for display.
     final_cols = [
         "Date", 
         "Home Value", 
@@ -136,8 +136,7 @@ if submitted:
     ]
     forecast_df = forecast_df[final_cols]
     
-    # Create a styled DataFrame with custom table styles.
-    # Wrap header text and set forecast columns to a fixed width.
+    # Create a styled DataFrame.
     styled_df = forecast_df.style.format({
         "Home Value": "$ {:,.2f}",
         "Contract Value": "$ {:,.2f}",
@@ -148,13 +147,15 @@ if submitted:
         "Secondary Market Investment (Acquisition)": "$ {:,.2f}"
     })
     
-    # Set table styles to wrap header text.
-    table_styles = [
-        {"selector": "th", "props": [("white-space", "normal"), ("text-align", "center"), ("vertical-align", "middle")]}
+    # Wrap header text and center it.
+    header_styles = [
+        {"selector": "th", "props": [("white-space", "normal"),
+                                       ("text-align", "center"),
+                                       ("vertical-align", "middle")]}
     ]
-    styled_df = styled_df.set_table_styles(table_styles)
+    styled_df = styled_df.set_table_styles(header_styles)
     
-    # Set a fixed width for forecasted value columns (all columns except "Date").
+    # Set fixed width for all forecast columns (all except "Date").
     forecast_cols = [
         "Home Value", 
         "Contract Value", 
@@ -166,5 +167,8 @@ if submitted:
     ]
     styled_df = styled_df.set_properties(subset=forecast_cols, **{"width": "150px", "text-align": "right"})
     
+    # Render the styled DataFrame as HTML.
+    html_table = styled_df.render()
+    
     st.write("### 120-Month HEI Forecast")
-    st.dataframe(styled_df)
+    st.markdown(html_table, unsafe_allow_html=True)
