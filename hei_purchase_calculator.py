@@ -50,13 +50,13 @@ with st.form(key="forecast_form"):
     investor_cap = investor_cap_input / 100.0
     col1, col2 = st.columns(2)
     with col1:
-        premium_discount_input = st.number_input("Premium / Discount (%)", value=6.0, step=0.1)
+        premium_discount_input = st.number_input("Acquisition Premium / Discount (%)", value=6.0, step=0.1)
     with col2:
-        st.write("")  # for spacing
+        st.write("")  # spacer
     premium_discount = premium_discount_input / 100.0
 
     st.subheader("Secondary Market Investment (Acquisition) Inputs")
-    sec_method = st.radio("Determine secondary market investment by:", 
+    sec_method = st.radio("Determine secondary market acquisition by:", 
                           options=["Contract Age (months)", "Purchase Date"])
     if sec_method == "Contract Age (months)":
         sec_contract_age = st.number_input("Contract Age (months)", value=12, step=1)
@@ -64,6 +64,18 @@ with st.form(key="forecast_form"):
     else:
         sec_purchase_date = st.date_input("Secondary Purchase Date", value=datetime.date(2024, 12, 11))
         sec_contract_age = None
+
+    st.subheader("Secondary Market Investment (Disposition) Inputs")
+    disposition_method = st.radio("Determine secondary market disposition by:", 
+                                  options=["Hold Period (months)", "Sale Date"])
+    if disposition_method == "Hold Period (months)":
+        hold_period_months = st.number_input("Hold Period (months)", value=60, step=1)
+        sale_date = None
+    else:
+        sale_date = st.date_input("Sale Date", value=datetime.date(2029, 12, 11))
+        hold_period_months = None
+    disposition_premium_input = st.number_input("Disposition Premium / (Discount) (%)", value=6.0, step=0.1)
+    disposition_premium = disposition_premium_input / 100.0
         
     submitted = st.form_submit_button(label="Generate 120-Month Forecast")
 
@@ -102,28 +114,48 @@ if submitted:
     forecast_df["Settlement Value"] = np.minimum(forecast_df["Contract Value"], forecast_df["Investor Cap"])
     
     # Add Secondary Market Value - Acquisition:
-    # = Settlement Value * (1 + Premium/Discount)
+    # = Settlement Value * (1 + Acquisition Premium/Discount)
     forecast_df["Secondary Market Value - Acquisition"] = forecast_df["Settlement Value"] * (1 + premium_discount)
     
-    # Add the new column: Secondary Market Investment (Acquisition)
+    # Add the Acquisition Investment column:
     # Initialize with 0 (so that all non-target rows show 0)
     forecast_df["Secondary Market Investment (Acquisition)"] = 0.0
     
-    # Determine the target month:
+    # Determine the target month for Acquisition:
     if sec_method == "Contract Age (months)":
-        target_month = int(sec_contract_age)
+        target_month_acq = int(sec_contract_age)
     else:
-        # Convert the forecast dates (strings) back to datetime.
         forecast_dates = pd.to_datetime(forecast_df["Date"], format="%m/%d/%Y")
-        # Find the first index where forecast date >= secondary purchase date.
-        target_month = forecast_dates[forecast_dates >= pd.to_datetime(sec_purchase_date)].index.min()
-        if pd.isna(target_month):
-            target_month = forecast_df.index[-1]
+        target_month_acq = forecast_dates[forecast_dates >= pd.to_datetime(sec_purchase_date)].index.min()
+        if pd.isna(target_month_acq):
+            target_month_acq = forecast_df.index[-1]
     
-    # In the target month row, set the new column value to the Secondary Market Value - Acquisition.
-    forecast_df.loc[target_month, "Secondary Market Investment (Acquisition)"] = forecast_df.loc[target_month, "Secondary Market Value - Acquisition"]
+    # In the target month row, set the Acquisition Investment value.
+    forecast_df.loc[target_month_acq, "Secondary Market Investment (Acquisition)"] = \
+        forecast_df.loc[target_month_acq, "Secondary Market Value - Acquisition"]
     
-    # Reorder columns for display:
+    # ----- Now, compute the disposition values -----
+    # Add Secondary Market Value (Disposition):
+    # = Settlement Value * (1 + Disposition Premium/Discount)
+    forecast_df["Secondary Market Value (Disposition)"] = forecast_df["Settlement Value"] * (1 + disposition_premium)
+    
+    # Add the Disposition Investment column (initialize with 0).
+    forecast_df["Secondary Market Investment (Disposition)"] = 0.0
+    
+    # Determine the target month for Disposition:
+    if disposition_method == "Hold Period (months)":
+        target_month_disp = int(hold_period_months)
+    else:
+        forecast_dates = pd.to_datetime(forecast_df["Date"], format="%m/%d/%Y")
+        target_month_disp = forecast_dates[forecast_dates >= pd.to_datetime(sale_date)].index.min()
+        if pd.isna(target_month_disp):
+            target_month_disp = forecast_df.index[-1]
+    
+    # In the target month row, set the Disposition Investment value.
+    forecast_df.loc[target_month_disp, "Secondary Market Investment (Disposition)"] = \
+        forecast_df.loc[target_month_disp, "Secondary Market Value (Disposition)"]
+    
+    # Reorder columns for display.
     final_cols = [
         "Date", 
         "Home Value", 
@@ -132,7 +164,9 @@ if submitted:
         "Acquisition Premium", 
         "Settlement Value", 
         "Secondary Market Value - Acquisition", 
-        "Secondary Market Investment (Acquisition)"
+        "Secondary Market Investment (Acquisition)",
+        "Secondary Market Value (Disposition)",
+        "Secondary Market Investment (Disposition)"
     ]
     forecast_df = forecast_df[final_cols]
     
@@ -145,6 +179,8 @@ if submitted:
             "Acquisition Premium": "{:.2%}",
             "Settlement Value": "$ {:,.2f}",
             "Secondary Market Value - Acquisition": "$ {:,.2f}",
-            "Secondary Market Investment (Acquisition)": "$ {:,.2f}"
+            "Secondary Market Investment (Acquisition)": "$ {:,.2f}",
+            "Secondary Market Value (Disposition)": "$ {:,.2f}",
+            "Secondary Market Investment (Disposition)": "$ {:,.2f}"
         })
     )
