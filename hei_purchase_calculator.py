@@ -2,18 +2,18 @@ import streamlit as st
 import pandas as pd
 import datetime
 
-def calculate_hei(home_value, original_amount, multiplier, op_value, origination_date, 
-                   purchase_date, premium_discount, investor_cap, appreciation, hold_period):
-    contract_age = (purchase_date - origination_date).days // 30
-    purchase_price = original_amount * (1 + premium_discount)
-    sale_price = purchase_price * ((1 + appreciation) ** (hold_period / 12))
+def calculate_hei(home_value, appreciation, origination_date, hold_period):
+    data = []
+    current_date = origination_date
+    current_value = home_value
     
-    results = {
-        "Contract Age (Months)": contract_age,
-        "Purchase Price": purchase_price,
-        "Sale Price": sale_price,
-    }
-    return results
+    for month in range(hold_period + 1):
+        data.append([current_date, month, current_value])
+        current_date += pd.DateOffset(months=1)
+        current_value *= (1 + appreciation / 12)
+    
+    df = pd.DataFrame(data, columns=["Date", "Month", "Home Value"])
+    return df
 
 st.title("Home Equity Investment Simulator")
 
@@ -29,7 +29,6 @@ appreciation = st.number_input("Appreciation Rate (Annual)", value=0.03, step=0.
 hold_period = st.number_input("Hold Period (Months)", value=12, step=1)
 
 if st.button("Calculate"):
-    results = calculate_hei(home_value, original_amount, multiplier, op_value, origination_date, 
-                            purchase_date, premium_discount, investor_cap, appreciation, hold_period)
-    st.write("### Results")
-    st.write(results)
+    df = calculate_hei(home_value, appreciation, origination_date, hold_period)
+    st.write("### Home Value Over Time")
+    st.dataframe(df)
