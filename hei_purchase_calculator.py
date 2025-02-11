@@ -2,20 +2,21 @@ import streamlit as st
 import pandas as pd
 import datetime
 
-def calculate_hei(home_value, appreciation, origination_date, months=121):
+def calculate_forecast(home_value, appreciation, origination_date, months):
     """
-    Forecast the home’s value over a number of months using monthly compounding.
+    Forecast the home’s value month-by-month using monthly compounding.
+    Returns a DataFrame with the forecast for each month.
     """
     data = []
-    current_date = origination_date
     current_value = home_value
+    current_date = pd.to_datetime(origination_date)
     
-    for month in range(months):
-        data.append([current_date.strftime('%Y-%m-%d'), month, round(current_value, 2)])
+    # Include month 0 (the origination date) up through the specified number of months.
+    for m in range(months + 1):
+        data.append((m, current_date.strftime('%Y-%m-%d'), current_value))
         current_date += pd.DateOffset(months=1)
         current_value *= (1 + appreciation / 12)
-    
-    df = pd.DataFrame(data, columns=["Date", "Month", "Home Value"])
+    df = pd.DataFrame(data, columns=["Month", "Date", "Forecasted HEI Value"])
     return df
 
 def full_months_between(start_date, end_date):
@@ -29,62 +30,63 @@ def full_months_between(start_date, end_date):
 
 st.title("Home Equity Investment Simulator")
 
-# User inputs
-home_value = st.number_input("Home Value ($)", value=1000000.0, step=1000.0)
+# --- Input widgets ---
+home_value = st.number_input("Home Value ($)", value=200000.0, step=1000.0)
 original_amount = st.number_input("Original HEI Amount ($)", value=200000.0, step=1000.0)
 multiplier = st.number_input("Multiplier", value=2.0, step=0.1)
-# (We will calculate option value from these inputs.)
 origination_date = st.date_input("Origination Date", value=datetime.date(2023, 12, 11))
 purchase_date = st.date_input("Purchase Date", value=datetime.date(2024, 2, 24))
-st.info("Premium / Discount should be entered as a decimal. For example, 0.06 represents a 6% premium, while -0.06 would represent a 6% discount.")
+st.info("Enter Premium / Discount as a decimal (e.g. 0.06 for a 6% premium, -0.06 for a 6% discount).")
 premium_discount = st.number_input("Premium / Discount", value=0.06, step=0.01)
-st.info("Investor Cap is the maximum profit (as a fraction of the original HEI amount) the investor can earn. For example, 0.2 represents a 20% cap.")
+st.info("Investor Cap represents the maximum profit as a fraction of the original HEI amount (e.g., 0.2 means 20%).")
 investor_cap = st.number_input("Investor Cap", value=0.2, step=0.01)
-appreciation = st.number_input("Appreciation Rate (Annual)", value=0.03, step=0.01)
+appreciation = st.number_input("Appreciation Rate (Annual, as a decimal)", value=0.03, step=0.01)
 
 if st.button("Calculate"):
-    # 1. Calculate Option Value:
-    #    option_value = (original_amount / home_value) * multiplier
+    # 1. Option Value
     option_value = (original_amount / home_value) * multiplier
-    
-    # 2. Calculate Contract Age (number of full months between origination and purchase)
+
+    # 2. Contract Age (in full months)
     contract_age = full_months_between(origination_date, purchase_date)
     
-    # 3. Forecast the HEI (home value) over 120 months starting from origination_date.
-    forecast_df = calculate_hei(home_value, appreciation, pd.to_datetime(origination_date))
+    # 3. Forecast HEI value at the purchase date (i.e. at contract_age)
+    forecast_df = calculate_forecast(home_value, appreciation, origination_date, contract_age)
+    forecasted_value_at_purchase = forecast_df.loc[forecast_df['Month'] == contract_age, 'Forecasted HEI Value'].values[0]
     
-    # 4. Retrieve the forecasted home value at the contract age.
-    if contract_age < len(forecast_df):
-        forecasted_value_at_purchase = forecast_df.loc[forecast_df['Month'] == contract_age, 'Home Value'].values[0]
-    else:
-        st.error("Contract age is beyond the forecast range. Using the final available forecast value.")
-        forecasted_value_at_purchase = forecast_df['Home Value'].iloc[-1]
+    # 4. Purchase Price: apply premium/discount to the forecasted value
+    purchase_price = forecasted_value_at_purchase * (1 + premium_discount)
     
-    # 5. Calculate Purchase Pricing:
-    #    Here we adjust the forecasted HEI by (1 + premium_discount)
-    purchase_pricing = forecasted_value_at_purchase * (1 + premium_discount)
-    
-    # 6. Compute the Investor’s Gross Return based on the option value and purchase pricing.
-    gross_return = purchase_pricing * option_value
+    # 5. Compute the investor’s gross return and then apply the cap.
+    gross_return = purchase_price * option_value
     profit = gross_return - original_amount
-    
-    # Apply the investor cap to the profit (only if the profit is positive)
     if profit > 0:
         capped_profit = min(profit, investor_cap * original_amount)
     else:
         capped_profit = profit
+    sale_price = original_amount + capped_profit
+
+    # Prepare a detailed results dictionary.
+    results = {
+        "Option Value": round(option_value, 4),
+        "Contract Age (Months)": contract_age,
+        "Forecasted HEI Value at Purchase": round(forecasted_value_at_purchase, 2),
+        "Purchase Price": round(purchase_price, 0),
+        "Gross Return": round(gross_return, 0),
+        "Profit": round(profit, 0),
+        "Capped Profit": round(capped_profit, 0),
+        "Final Investor Value (Sale Price)": round(sale_price, 0)
+    }
     
-    final_investor_value = original_amount + capped_profit
+    # If you want to output only the three values you mentioned, you could do:
+    # simple_results = {
+    #     "Contract Age (Months)": contract_age,
+    #     "Purchase Price": round(purchase_price, 0),
+    #     "Sale Price": round(sale_price, 0)
+    # }
+    # st.json(simple_results)
     
-    # Display the results
-    st.write("### Simulation Results")
-    st.write(f"**Option Value:** {option_value:.4f}")
-    st.write(f"**Contract Age (months):** {contract_age}")
-    st.write(f"**Forecasted HEI Value at Purchase Date:** ${forecasted_value_at_purchase:,.2f}")
-    st.write(f"**Purchase Pricing:** ${purchase_pricing:,.2f}")
-    st.write(f"**Gross Return:** ${gross_return:,.2f}")
-    st.write(f"**Profit (after applying cap if applicable):** ${capped_profit:,.2f}")
-    st.write(f"**Final Investor Value:** ${final_investor_value:,.2f}")
+    st.write("### Detailed Results")
+    st.json(results)
     
-    st.write("### 120-Month Home Value Forecast")
-    st.dataframe(forecast_df.style.format({"Home Value": "$ {:,.2f}"}))
+    st.write("### Forecasted HEI Value Over Time")
+    st.dataframe(forecast_df.style.format({"Forecasted HEI Value": "$ {:,.2f}"}))
