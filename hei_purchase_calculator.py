@@ -109,11 +109,6 @@ if submitted:
     # Initialize with 0 for all rows.
     forecast_df["Secondary Market Investment (Acquisition)"] = 0.0
     
-    # Ensure the new column is numeric.
-    forecast_df["Secondary Market Investment (Acquisition)"] = pd.to_numeric(
-        forecast_df["Secondary Market Investment (Acquisition)"], errors="coerce"
-    )
-    
     # Determine the target month:
     if sec_method == "Contract Age (months)":
         target_month = int(sec_contract_age)
@@ -141,39 +136,11 @@ if submitted:
     ]
     forecast_df = forecast_df[final_cols]
     
-    # Create a styled DataFrame.
-    styled_df = forecast_df.style.format({
-        "Home Value": "$ {:,.2f}",
-        "Contract Value": "$ {:,.2f}",
-        "Investor Cap": "$ {:,.2f}",
-        "Acquisition Premium": "{:.2%}",
-        "Settlement Value": "$ {:,.2f}",
-        "Secondary Market Value - Acquisition": "$ {:,.2f}",
-        "Secondary Market Investment (Acquisition)": "$ {:,.2f}"
-    })
-    
-    # Wrap header text and center it.
-    header_styles = [
-        {"selector": "th", "props": [("white-space", "normal"),
-                                       ("text-align", "center"),
-                                       ("vertical-align", "middle")]}
-    ]
-    styled_df = styled_df.set_table_styles(header_styles)
-    
-    # Set fixed width for all forecast columns (all except "Date").
-    forecast_cols = [
-        "Home Value", 
-        "Contract Value", 
-        "Investor Cap", 
-        "Acquisition Premium", 
-        "Settlement Value", 
-        "Secondary Market Value - Acquisition", 
-        "Secondary Market Investment (Acquisition)"
-    ]
-    styled_df = styled_df.set_properties(subset=forecast_cols, **{"width": "150px", "text-align": "right"})
-    
-    # Render the styled DataFrame as HTML using to_html() (compatible with newer pandas versions).
-    html_table = styled_df.to_html()
-    
+    # Use the native Streamlit table display.
     st.write("### 120-Month HEI Forecast")
-    st.markdown(html_table, unsafe_allow_html=True)
+    st.dataframe(
+        forecast_df.style
+            .set_sticky()  # makes headers sticky
+            .set_table_styles([{"selector": "th", "props": [("text-align", "center")]}]),
+        height=500, width=1000
+    )
