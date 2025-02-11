@@ -58,12 +58,32 @@ if st.button("Generate 120-Month Forecast"):
     #   Investor Cap Value = Original HEI Amount * (1 + investor_cap)^(month / 12)
     forecast_df["Investor Cap Value"] = original_hei_amount * ((1 + investor_cap) ** (forecast_df.index / 12))
     
-    # Display the forecast table with the three columns.
+    # Rename the columns to match the desired labels:
+    # "Forecasted HEI Value" becomes "Home Value"
+    # "Option Value" becomes "Contract Value"
+    # "Investor Cap Value" becomes "Investor Cap"
+    forecast_df.rename(columns={
+        "Forecasted HEI Value": "Home Value",
+        "Option Value": "Contract Value",
+        "Investor Cap Value": "Investor Cap"
+    }, inplace=True)
+    
+    # Add the Acquisition Premium column.
+    # For each month: Acquisition Premium = max(1 - (Investor Cap / Contract Value), 0)
+    forecast_df["Acquisition Premium"] = forecast_df.apply(
+        lambda row: max(1 - (row["Investor Cap"] / row["Contract Value"]), 0),
+        axis=1
+    )
+    
+    # Reorder the columns for display: Month (index), Date, Home Value, Contract Value, Investor Cap, Acquisition Premium
+    forecast_df = forecast_df[["Date", "Home Value", "Contract Value", "Investor Cap", "Acquisition Premium"]]
+    
     st.write("### 120-Month HEI Forecast")
     st.dataframe(
         forecast_df.style.format({
-            "Forecasted HEI Value": "$ {:,.2f}",
-            "Option Value": "$ {:,.2f}",
-            "Investor Cap Value": "$ {:,.2f}"
+            "Home Value": "$ {:,.2f}",
+            "Contract Value": "$ {:,.2f}",
+            "Investor Cap": "$ {:,.2f}",
+            "Acquisition Premium": "{:.4f}"
         })
     )
