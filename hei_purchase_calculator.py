@@ -105,9 +105,14 @@ if submitted:
     # = Settlement Value * (1 + Premium/Discount)
     forecast_df["Secondary Market Value - Acquisition"] = forecast_df["Settlement Value"] * (1 + premium_discount)
     
-    # Add new column: Secondary Market Investment (Acquisition)
+    # Add the new column: Secondary Market Investment (Acquisition)
     # Initialize with 0 for all rows.
     forecast_df["Secondary Market Investment (Acquisition)"] = 0.0
+    
+    # Ensure the new column is numeric.
+    forecast_df["Secondary Market Investment (Acquisition)"] = pd.to_numeric(
+        forecast_df["Secondary Market Investment (Acquisition)"], errors="coerce"
+    )
     
     # Determine the target month:
     if sec_method == "Contract Age (months)":
@@ -167,8 +172,8 @@ if submitted:
     ]
     styled_df = styled_df.set_properties(subset=forecast_cols, **{"width": "150px", "text-align": "right"})
     
-    # Render the styled DataFrame as HTML.
-    html_table = styled_df.render()
+    # Render the styled DataFrame as HTML using to_html() (compatible with newer pandas versions).
+    html_table = styled_df.to_html()
     
     st.write("### 120-Month HEI Forecast")
     st.markdown(html_table, unsafe_allow_html=True)
