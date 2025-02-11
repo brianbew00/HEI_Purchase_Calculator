@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import datetime
+from st_aggrid import AgGrid, GridOptionsBuilder
 
 def calculate_forecast(home_value, appreciation, origination_date, months=120):
     """
@@ -136,47 +137,16 @@ if submitted:
     ]
     forecast_df = forecast_df[final_cols]
     
-    # Define header styles to wrap text in the column headers.
-    header_styles = [
-        {
-            "selector": "th",
-            "props": [
-                ("white-space", "normal"),
-                ("word-wrap", "break-word"),
-                ("text-align", "center"),
-                ("vertical-align", "middle")
-            ]
-        }
-    ]
+    # Build AgGrid gridOptions.
+    gb = GridOptionsBuilder.from_dataframe(forecast_df)
+    for col in forecast_df.columns:
+        if col == "Date":
+            # Set fixed width for Date column.
+            gb.configure_column(col, width=150, suppressSizeToFit=True)
+        else:
+            # Use flex=1 so remaining columns share available width equally.
+            gb.configure_column(col, flex=1, wrapText=True, autoHeight=True, wrapHeaderText=True)
+    gridOptions = gb.build()
     
-    # List of forecast columns to be equally distributed (all except "Date").
-    forecast_cols = [
-        "Home Value", 
-        "Contract Value", 
-        "Investor Cap", 
-        "Acquisition Premium", 
-        "Settlement Value", 
-        "Secondary Market Value - Acquisition", 
-        "Secondary Market Investment (Acquisition)"
-    ]
-    
-    # Apply formatting using the Pandas Styler.
-    styled_df = forecast_df.style.format({
-        "Home Value": "$ {:,.2f}",
-        "Contract Value": "$ {:,.2f}",
-        "Investor Cap": "$ {:,.2f}",
-        "Acquisition Premium": "{:.2%}",
-        "Settlement Value": "$ {:,.2f}",
-        "Secondary Market Value - Acquisition": "$ {:,.2f}",
-        "Secondary Market Investment (Acquisition)": "$ {:,.2f}"
-    }).set_sticky() \
-      .set_table_styles(header_styles) \
-      .set_properties(subset=forecast_cols, **{
-            "min-width": "150px",
-            "width": "150px",
-            "max-width": "150px",
-            "text-align": "right"
-      })
-    
-    st.write("### 120-Month HEI Forecast")
-    st.dataframe(styled_df, height=500, width=1000)
+    st.subheader("120-Month HEI Forecast")
+    AgGrid(forecast_df, gridOptions=gridOptions, height=500, width='100%', reload_data=True)
