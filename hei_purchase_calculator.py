@@ -29,12 +29,8 @@ st.title("HEI Forecast Calculator")
 
 # Primary inputs
 home_value = st.number_input("Home Value ($)", value=1000000.0, step=1000.0)
-
-# Appreciation entered as a whole number percentage (e.g., 3 for 3%)
 appreciation_input = st.number_input("Appreciation Rate (Annual %)", value=3.0, step=0.1)
-# Convert to decimal
-appreciation = appreciation_input / 100.0
-
+appreciation = appreciation_input / 100.0  # Convert to decimal
 origination_date = st.date_input("Origination Date", value=datetime.date(2023, 12, 11))
 
 # Inputs for Option Value calculation
@@ -43,8 +39,11 @@ multiplier = st.number_input("Multiplier", value=2.0, step=0.1)
 
 # Investor Cap input (entered as a whole number percentage, default is 20%)
 investor_cap_input = st.number_input("Investor Cap (%)", value=20.0, step=0.1)
-# Convert to decimal
-investor_cap = investor_cap_input / 100.0
+investor_cap = investor_cap_input / 100.0  # Convert to decimal
+
+# Premium/Discount input (entered as a whole number percentage, default is 6%)
+premium_discount_input = st.number_input("Premium / Discount (%)", value=6.0, step=0.1)
+premium_discount = premium_discount_input / 100.0  # Convert to decimal
 
 if st.button("Generate 120-Month Forecast"):
     # Generate the forecast table out to 120 months.
@@ -59,10 +58,10 @@ if st.button("Generate 120-Month Forecast"):
     #   Investor Cap = Original HEI Amount * (1 + investor_cap)^(month / 12)
     forecast_df["Investor Cap Value"] = original_hei_amount * ((1 + investor_cap) ** (forecast_df.index / 12))
     
-    # Rename columns to match the desired labels:
-    #   "Forecasted HEI Value" becomes "Home Value"
-    #   "Option Value" becomes "Contract Value"
-    #   "Investor Cap Value" becomes "Investor Cap"
+    # Rename columns to match desired labels:
+    # "Forecasted HEI Value" becomes "Home Value"
+    # "Option Value" becomes "Contract Value"
+    # "Investor Cap Value" becomes "Investor Cap"
     forecast_df.rename(columns={
         "Forecasted HEI Value": "Home Value",
         "Option Value": "Contract Value",
@@ -76,14 +75,24 @@ if st.button("Generate 120-Month Forecast"):
         axis=1
     )
     
-    # Add the Settlement Value column using NumPy's minimum:
+    # Add the Settlement Value column.
+    # Settlement Value = min(Contract Value, Investor Cap)
     forecast_df["Settlement Value"] = np.minimum(forecast_df["Contract Value"], forecast_df["Investor Cap"])
     
-    # Debug: Output the columns to verify "Settlement Value" is present.
-    st.write("Columns in DataFrame:", list(forecast_df.columns))
+    # Add the Secondary Market Value - Acquisition column.
+    # Secondary Market Value - Acquisition = Settlement Value * (1 + Premium/Discount)
+    forecast_df["Secondary Market Value - Acquisition"] = forecast_df["Settlement Value"] * (1 + premium_discount)
     
     # Reorder the columns for display:
-    forecast_df = forecast_df[["Date", "Home Value", "Contract Value", "Investor Cap", "Acquisition Premium", "Settlement Value"]]
+    forecast_df = forecast_df[[
+        "Date", 
+        "Home Value", 
+        "Contract Value", 
+        "Investor Cap", 
+        "Acquisition Premium", 
+        "Settlement Value",
+        "Secondary Market Value - Acquisition"
+    ]]
     
     st.write("### 120-Month HEI Forecast")
     st.dataframe(
@@ -92,6 +101,7 @@ if st.button("Generate 120-Month Forecast"):
             "Contract Value": "$ {:,.2f}",
             "Investor Cap": "$ {:,.2f}",
             "Acquisition Premium": "{:.2%}",
-            "Settlement Value": "$ {:,.2f}"
+            "Settlement Value": "$ {:,.2f}",
+            "Secondary Market Value - Acquisition": "$ {:,.2f}"
         })
     )
