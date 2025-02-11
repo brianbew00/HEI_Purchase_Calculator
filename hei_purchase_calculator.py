@@ -18,7 +18,9 @@ def calculate_forecast(home_value, appreciation, origination_date, months=120):
     for m in range(months + 1):
         forecasted_value = home_value * ((1 + appreciation) ** (m / 12))
         forecast_date = pd.to_datetime(origination_date) + pd.DateOffset(months=m)
-        data.append((forecast_date.strftime('%Y-%m-%d'), forecasted_value))
+        # Format the date as MM/DD/YYYY
+        formatted_date = forecast_date.strftime('%m/%d/%Y')
+        data.append((formatted_date, forecasted_value))
     
     df = pd.DataFrame(data, columns=["Date", "Forecasted HEI Value"])
     df.index.name = "Month"
@@ -84,6 +86,6 @@ if st.button("Generate 120-Month Forecast"):
             "Home Value": "$ {:,.2f}",
             "Contract Value": "$ {:,.2f}",
             "Investor Cap": "$ {:,.2f}",
-            "Acquisition Premium": "{:.4f}"
+            "Acquisition Premium": "{:.2%}"
         })
     )
