@@ -106,7 +106,7 @@ if submitted:
     forecast_df["Secondary Market Value - Acquisition"] = forecast_df["Settlement Value"] * (1 + premium_discount)
     
     # Add the new column: Secondary Market Investment (Acquisition)
-    # Initialize with 0 (so that all non-target rows show 0)
+    # Initialize it with 0 for all rows.
     forecast_df["Secondary Market Investment (Acquisition)"] = 0.0
     
     # Determine the target month:
@@ -136,15 +136,35 @@ if submitted:
     ]
     forecast_df = forecast_df[final_cols]
     
+    # Create a styled DataFrame with custom table styles.
+    # Wrap header text and set forecast columns to a fixed width.
+    styled_df = forecast_df.style.format({
+        "Home Value": "$ {:,.2f}",
+        "Contract Value": "$ {:,.2f}",
+        "Investor Cap": "$ {:,.2f}",
+        "Acquisition Premium": "{:.2%}",
+        "Settlement Value": "$ {:,.2f}",
+        "Secondary Market Value - Acquisition": "$ {:,.2f}",
+        "Secondary Market Investment (Acquisition)": "$ {:,.2f}"
+    })
+    
+    # Set table styles to wrap header text.
+    table_styles = [
+        {"selector": "th", "props": [("white-space", "normal"), ("text-align", "center"), ("vertical-align", "middle")]}
+    ]
+    styled_df = styled_df.set_table_styles(table_styles)
+    
+    # Set a fixed width for forecasted value columns (all columns except "Date").
+    forecast_cols = [
+        "Home Value", 
+        "Contract Value", 
+        "Investor Cap", 
+        "Acquisition Premium", 
+        "Settlement Value", 
+        "Secondary Market Value - Acquisition", 
+        "Secondary Market Investment (Acquisition)"
+    ]
+    styled_df = styled_df.set_properties(subset=forecast_cols, **{"width": "150px", "text-align": "right"})
+    
     st.write("### 120-Month HEI Forecast")
-    st.dataframe(
-        forecast_df.style.format({
-            "Home Value": "$ {:,.2f}",
-            "Contract Value": "$ {:,.2f}",
-            "Investor Cap": "$ {:,.2f}",
-            "Acquisition Premium": "{:.2%}",
-            "Settlement Value": "$ {:,.2f}",
-            "Secondary Market Value - Acquisition": "$ {:,.2f}",
-            "Secondary Market Investment (Acquisition)": "$ {:,.2f}"
-        })
-    )
+    st.dataframe(styled_df)
