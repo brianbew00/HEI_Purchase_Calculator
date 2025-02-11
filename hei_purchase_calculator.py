@@ -136,6 +136,30 @@ if submitted:
     ]
     forecast_df = forecast_df[final_cols]
     
+    # Define header styles to wrap text in the column headers.
+    header_styles = [
+        {
+            "selector": "th",
+            "props": [
+                ("white-space", "normal"),
+                ("word-wrap", "break-word"),
+                ("text-align", "center"),
+                ("vertical-align", "middle")
+            ]
+        }
+    ]
+    
+    # List of forecast columns to be equally distributed (all except "Date").
+    forecast_cols = [
+        "Home Value", 
+        "Contract Value", 
+        "Investor Cap", 
+        "Acquisition Premium", 
+        "Settlement Value", 
+        "Secondary Market Value - Acquisition", 
+        "Secondary Market Investment (Acquisition)"
+    ]
+    
     # Apply formatting using the Pandas Styler.
     styled_df = forecast_df.style.format({
         "Home Value": "$ {:,.2f}",
@@ -146,26 +170,13 @@ if submitted:
         "Secondary Market Value - Acquisition": "$ {:,.2f}",
         "Secondary Market Investment (Acquisition)": "$ {:,.2f}"
     }).set_sticky() \
-      .set_table_styles([{"selector": "th", "props": [("text-align", "center")]}])
-    
-    # To attempt equal distribution for the forecast columns (all except Date), list them:
-    forecast_cols = [
-        "Home Value", 
-        "Contract Value", 
-        "Investor Cap", 
-        "Acquisition Premium", 
-        "Settlement Value", 
-        "Secondary Market Value - Acquisition", 
-        "Secondary Market Investment (Acquisition)"
-    ]
-    # We use set_properties on these columns. Note that the native Streamlit viewer may adjust widths,
-    # but this encourages equal widths.
-    styled_df = styled_df.set_properties(subset=forecast_cols, **{
-        "min-width": "150px",
-        "width": "150px",
-        "max-width": "150px",
-        "text-align": "right"
-    })
+      .set_table_styles(header_styles) \
+      .set_properties(subset=forecast_cols, **{
+            "min-width": "150px",
+            "width": "150px",
+            "max-width": "150px",
+            "text-align": "right"
+      })
     
     st.write("### 120-Month HEI Forecast")
     st.dataframe(styled_df, height=500, width=1000)
