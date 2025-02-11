@@ -41,12 +41,12 @@ multiplier = st.number_input("Multiplier", value=2.0, step=0.1)
 investor_cap_input = st.number_input("Investor Cap (%)", value=20.0, step=0.1)
 investor_cap = investor_cap_input / 100.0  # Convert to decimal
 
-# Premium/Discount input (entered as a whole number percentage, default is 6%)
+# Premium/Discount input for secondary market acquisition (entered as a whole number %; default is 6%)
 premium_discount_input = st.number_input("Premium / Discount (%)", value=6.0, step=0.1)
 premium_discount = premium_discount_input / 100.0  # Convert to decimal
 
 if st.button("Generate 120-Month Forecast"):
-    # Generate the forecast table out to 120 months.
+    # Generate the forecast table (120 months)
     forecast_df = calculate_forecast(home_value, appreciation, origination_date, months=120)
     
     # Calculate Option Value for each month:
@@ -59,9 +59,9 @@ if st.button("Generate 120-Month Forecast"):
     forecast_df["Investor Cap Value"] = original_hei_amount * ((1 + investor_cap) ** (forecast_df.index / 12))
     
     # Rename columns to match desired labels:
-    # "Forecasted HEI Value" becomes "Home Value"
-    # "Option Value" becomes "Contract Value"
-    # "Investor Cap Value" becomes "Investor Cap"
+    #   "Forecasted HEI Value" becomes "Home Value"
+    #   "Option Value" becomes "Contract Value"
+    #   "Investor Cap Value" becomes "Investor Cap"
     forecast_df.rename(columns={
         "Forecasted HEI Value": "Home Value",
         "Option Value": "Contract Value",
@@ -83,16 +83,9 @@ if st.button("Generate 120-Month Forecast"):
     # Secondary Market Value - Acquisition = Settlement Value * (1 + Premium/Discount)
     forecast_df["Secondary Market Value - Acquisition"] = forecast_df["Settlement Value"] * (1 + premium_discount)
     
-    # Reorder the columns for display:
-    forecast_df = forecast_df[[
-        "Date", 
-        "Home Value", 
-        "Contract Value", 
-        "Investor Cap", 
-        "Acquisition Premium", 
-        "Settlement Value",
-        "Secondary Market Value - Acquisition"
-    ]]
+    # Reorder columns for display:
+    full_cols = ["Date", "Home Value", "Contract Value", "Investor Cap", "Acquisition Premium", "Settlement Value", "Secondary Market Value - Acquisition"]
+    forecast_df = forecast_df[full_cols]
     
     st.write("### 120-Month HEI Forecast")
     st.dataframe(
@@ -105,3 +98,20 @@ if st.button("Generate 120-Month Forecast"):
             "Secondary Market Value - Acquisition": "$ {:,.2f}"
         })
     )
+    
+    st.write("### Secondary Market Investment (Acquisition)")
+    # Let the user choose how to specify the contract age for the secondary market investment:
+    method = st.radio("Select method for determining contract age for secondary market investment (acquisition):",
+                      options=["Contract Age (months)", "Purchase Date"])
+    if method == "Contract Age (months)":
+        sec_contract_age = st.number_input("Contract Age (months)", value=12, step=1)
+    else:
+        sec_purchase_date = st.date_input("Secondary Purchase Date", value=datetime.date(2024, 12, 11))
+        # Convert the forecast dates (currently stored as strings) back to datetime for comparison.
+        df_dates = pd.to_datetime(forecast_df["Date"], format='%m/%d/%Y')
+        # Find the first row where the forecast date is greater than or equal to the secondary purchase date.
+        matching_rows = forecast_df[df_dates >= pd.to_datetime(sec_purchase_date)]
+        if not matching_rows.empty:
+            sec_contract_age = matching_rows.index[0]
+        else:
+            sec_contract_age = fore
