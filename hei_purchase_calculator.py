@@ -5,9 +5,7 @@ import datetime
 def calculate_forecast(home_value, appreciation, origination_date, months=120):
     """
     Forecast the home's value month-by-month using the formula:
-    
       Forecasted HEI Value = home_value * (1 + appreciation)^(month / 12)
-    
     where appreciation is in decimal form.
     
     Returns a DataFrame with:
@@ -60,7 +58,7 @@ if st.button("Generate 120-Month Forecast"):
     #   Investor Cap Value = Original HEI Amount * (1 + investor_cap)^(month / 12)
     forecast_df["Investor Cap Value"] = original_hei_amount * ((1 + investor_cap) ** (forecast_df.index / 12))
     
-    # Rename the columns to match the desired labels:
+    # Rename columns to match desired labels:
     # "Forecasted HEI Value" becomes "Home Value"
     # "Option Value" becomes "Contract Value"
     # "Investor Cap Value" becomes "Investor Cap"
@@ -71,14 +69,21 @@ if st.button("Generate 120-Month Forecast"):
     }, inplace=True)
     
     # Add the Acquisition Premium column.
-    # For each month: Acquisition Premium = max(1 - (Investor Cap / Contract Value), 0)
+    # Acquisition Premium = max(1 - (Investor Cap / Contract Value), 0)
     forecast_df["Acquisition Premium"] = forecast_df.apply(
         lambda row: max(1 - (row["Investor Cap"] / row["Contract Value"]), 0),
         axis=1
     )
     
-    # Reorder the columns for display: Month (index), Date, Home Value, Contract Value, Investor Cap, Acquisition Premium
-    forecast_df = forecast_df[["Date", "Home Value", "Contract Value", "Investor Cap", "Acquisition Premium"]]
+    # Add the Settlement Value column.
+    # Settlement Value = minimum of Contract Value and Investor Cap.
+    forecast_df["Settlement Value"] = forecast_df.apply(
+        lambda row: min(row["Contract Value"], row["Investor Cap"]),
+        axis=1
+    )
+    
+    # Reorder the columns for display: Month (index), Date, Home Value, Contract Value, Investor Cap, Acquisition Premium, Settlement Value
+    forecast_df = forecast_df[["Date", "Home Value", "Contract Value", "Investor Cap", "Acquisition Premium", "Settlement Value"]]
     
     st.write("### 120-Month HEI Forecast")
     st.dataframe(
@@ -86,6 +91,7 @@ if st.button("Generate 120-Month Forecast"):
             "Home Value": "$ {:,.2f}",
             "Contract Value": "$ {:,.2f}",
             "Investor Cap": "$ {:,.2f}",
-            "Acquisition Premium": "{:.2%}"
+            "Acquisition Premium": "{:.2%}",
+            "Settlement Value": "$ {:,.2f}"
         })
     )
