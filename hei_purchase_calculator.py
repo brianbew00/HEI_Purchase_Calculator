@@ -131,7 +131,7 @@ if submitted:
     # Initialize Disposition Investment column with 0.
     forecast_df["Secondary Market Investment (Disposition)"] = 0.0
     if disp_method == "Hold Period (months)":
-        # The hold period is in addition to the acquisition contract age.
+        # The hold period is in addition to the acquisition target month.
         target_month_disp = int(target_month_acq) + int(hold_period_months)
     else:
         forecast_dates = pd.to_datetime(forecast_df["Date"], format="%m/%d/%Y")
@@ -141,6 +141,14 @@ if submitted:
     forecast_df.loc[target_month_disp, "Secondary Market Investment (Disposition)"] = \
         forecast_df.loc[target_month_disp, "Secondary Market Value (Disposition)"]
     
+    # Rename the secondary market columns to shorter labels.
+    forecast_df.rename(columns={
+        "Secondary Market Value - Acquisition": "Acquisition (Value)",
+        "Secondary Market Investment (Acquisition)": "Acquisition (Investment)",
+        "Secondary Market Value (Disposition)": "Disposition (Value)",
+        "Secondary Market Investment (Disposition)": "Disposition (Investment)"
+    }, inplace=True)
+    
     # Reorder columns for display.
     final_cols = [
         "Date", 
@@ -149,10 +157,10 @@ if submitted:
         "Investor Cap", 
         "Acquisition Premium", 
         "Settlement Value", 
-        "Secondary Market Value - Acquisition", 
-        "Secondary Market Investment (Acquisition)",
-        "Secondary Market Value (Disposition)",
-        "Secondary Market Investment (Disposition)"
+        "Acquisition (Value)", 
+        "Acquisition (Investment)",
+        "Disposition (Value)",
+        "Disposition (Investment)"
     ]
     forecast_df = forecast_df[final_cols]
     
@@ -164,9 +172,9 @@ if submitted:
             "Investor Cap": "$ {:,.2f}",
             "Acquisition Premium": "{:.2%}",
             "Settlement Value": "$ {:,.2f}",
-            "Secondary Market Value - Acquisition": "$ {:,.2f}",
-            "Secondary Market Investment (Acquisition)": "$ {:,.2f}",
-            "Secondary Market Value (Disposition)": "$ {:,.2f}",
-            "Secondary Market Investment (Disposition)": "$ {:,.2f}"
+            "Acquisition (Value)": "$ {:,.2f}",
+            "Acquisition (Investment)": "$ {:,.2f}",
+            "Disposition (Value)": "$ {:,.2f}",
+            "Disposition (Investment)": "$ {:,.2f}"
         })
     )
