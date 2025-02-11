@@ -2,13 +2,13 @@ import streamlit as st
 import pandas as pd
 import datetime
 
-def calculate_hei(home_value, appreciation, origination_date, hold_period):
+def calculate_hei(home_value, appreciation, origination_date):
     data = []
     current_date = origination_date
     current_value = home_value
     
-    for month in range(hold_period + 1):
-        data.append([current_date, month, current_value])
+    for month in range(121):  # 120-month forecast
+        data.append([current_date, month, round(current_value, 2)])
         current_date += pd.DateOffset(months=1)
         current_value *= (1 + appreciation / 12)
     
@@ -26,9 +26,8 @@ purchase_date = st.date_input("Purchase Date", value=datetime.date(2024, 2, 24))
 premium_discount = st.number_input("Premium / Discount", value=0.06, step=0.01)
 investor_cap = st.number_input("Investor Cap", value=0.2, step=0.01)
 appreciation = st.number_input("Appreciation Rate (Annual)", value=0.03, step=0.01)
-hold_period = st.number_input("Hold Period (Months)", value=12, step=1)
 
 if st.button("Calculate"):
-    df = calculate_hei(home_value, appreciation, origination_date, hold_period)
-    st.write("### Home Value Over Time")
+    df = calculate_hei(home_value, appreciation, origination_date)
+    st.write("### 120-Month Home Value Forecast")
     st.dataframe(df)
