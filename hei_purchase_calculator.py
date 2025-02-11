@@ -1,14 +1,13 @@
 import streamlit as st
 import pandas as pd
 import datetime
-import numpy as np
 
 def calculate_forecast(home_value, appreciation, origination_date, months=120):
     """
     Forecast the home's value month-by-month using the formula:
     
       Forecasted HEI Value = home_value * (1 + appreciation)^(month / 12)
-      
+    
     where appreciation is in decimal form.
     
     Returns a DataFrame with:
@@ -55,24 +54,16 @@ if st.button("Generate 120-Month Forecast"):
     option_value_multiplier = (original_hei_amount / home_value) * multiplier
     forecast_df["Option Value"] = forecast_df["Forecasted HEI Value"] * option_value_multiplier
     
-    # Calculate the Investor Cap Value for each month using the formula:
+    # Calculate the Investor Cap Value for each month using:
     #   Investor Cap Value = Original HEI Amount * (1 + investor_cap)^(month / 12)
-    # We can use the DataFrame index (which is the month number) for this calculation.
     forecast_df["Investor Cap Value"] = original_hei_amount * ((1 + investor_cap) ** (forecast_df.index / 12))
     
-    # Now, apply the cap for each month: the Capped Option Value is the minimum of the
-    # calculated Option Value and the Investor Cap Value for that month.
-    forecast_df["Capped Option Value"] = forecast_df.apply(
-        lambda row: min(row["Option Value"], row["Investor Cap Value"]), axis=1
-    )
-    
-    # Display the forecast table with the new columns.
+    # Display the forecast table with the three columns.
     st.write("### 120-Month HEI Forecast")
     st.dataframe(
         forecast_df.style.format({
             "Forecasted HEI Value": "$ {:,.2f}",
             "Option Value": "$ {:,.2f}",
-            "Investor Cap Value": "$ {:,.2f}",
-            "Capped Option Value": "$ {:,.2f}"
+            "Investor Cap Value": "$ {:,.2f}"
         })
     )
