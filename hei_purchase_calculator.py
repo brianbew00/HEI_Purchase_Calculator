@@ -2,11 +2,10 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import datetime
-from st_aggrid import AgGrid, GridOptionsBuilder
 
 def calculate_forecast(home_value, appreciation, origination_date, months=120):
     """
-    Forecast the home's value month-by-month using:
+    Forecast the home's value month-by-month using the formula:
       Home Value = home_value * (1 + appreciation)^(month / 12)
     where appreciation is in decimal form.
     
@@ -53,7 +52,7 @@ with st.form(key="forecast_form"):
     with col1:
         premium_discount_input = st.number_input("Premium / Discount (%)", value=6.0, step=0.1)
     with col2:
-        st.write("")  # spacer
+        st.write("")  # for spacing
     premium_discount = premium_discount_input / 100.0
 
     st.subheader("Secondary Market Investment (Acquisition) Inputs")
@@ -106,8 +105,8 @@ if submitted:
     # = Settlement Value * (1 + Premium/Discount)
     forecast_df["Secondary Market Value - Acquisition"] = forecast_df["Settlement Value"] * (1 + premium_discount)
     
-    # Add new column: Secondary Market Investment (Acquisition)
-    # Initialize with 0 for all rows.
+    # Add the new column: Secondary Market Investment (Acquisition)
+    # Initialize with 0 (so that all non-target rows show 0)
     forecast_df["Secondary Market Investment (Acquisition)"] = 0.0
     
     # Determine the target month:
@@ -116,15 +115,15 @@ if submitted:
     else:
         # Convert the forecast dates (strings) back to datetime.
         forecast_dates = pd.to_datetime(forecast_df["Date"], format="%m/%d/%Y")
+        # Find the first index where forecast date >= secondary purchase date.
         target_month = forecast_dates[forecast_dates >= pd.to_datetime(sec_purchase_date)].index.min()
         if pd.isna(target_month):
             target_month = forecast_df.index[-1]
     
     # In the target month row, set the new column value to the Secondary Market Value - Acquisition.
-    forecast_df.loc[target_month, "Secondary Market Investment (Acquisition)"] = \
-        forecast_df.loc[target_month, "Secondary Market Value - Acquisition"]
+    forecast_df.loc[target_month, "Secondary Market Investment (Acquisition)"] = forecast_df.loc[target_month, "Secondary Market Value - Acquisition"]
     
-    # Reorder columns for display.
+    # Reorder columns for display:
     final_cols = [
         "Date", 
         "Home Value", 
@@ -137,16 +136,15 @@ if submitted:
     ]
     forecast_df = forecast_df[final_cols]
     
-    # Build AgGrid gridOptions.
-    gb = GridOptionsBuilder.from_dataframe(forecast_df)
-    for col in forecast_df.columns:
-        if col == "Date":
-            # Set fixed width for Date column.
-            gb.configure_column(col, width=150, suppressSizeToFit=True)
-        else:
-            # Use flex=1 so remaining columns share available width equally.
-            gb.configure_column(col, flex=1, wrapText=True, autoHeight=True, wrapHeaderText=True)
-    gridOptions = gb.build()
-    
-    st.subheader("120-Month HEI Forecast")
-    AgGrid(forecast_df, gridOptions=gridOptions, height=500, width='100%', reload_data=True)
+    st.write("### 120-Month HEI Forecast")
+    st.dataframe(
+        forecast_df.style.format({
+            "Home Value": "$ {:,.2f}",
+            "Contract Value": "$ {:,.2f}",
+            "Investor Cap": "$ {:,.2f}",
+            "Acquisition Premium": "{:.2%}",
+            "Settlement Value": "$ {:,.2f}",
+            "Secondary Market Value - Acquisition": "$ {:,.2f}",
+            "Secondary Market Investment (Acquisition)": "$ {:,.2f}"
+        })
+    )
