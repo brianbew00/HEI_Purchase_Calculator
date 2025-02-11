@@ -8,10 +8,10 @@ def calculate_forecast(home_value, appreciation, origination_date, months=120):
     
       Forecasted HEI Value = home_value * (1 + appreciation)^(month / 12)
     
-    where appreciation is already in decimal form.
+    where appreciation is in decimal form.
     
     Returns a DataFrame with:
-      - Index labeled as "Month"
+      - The index labeled as "Month"
       - Columns: Date, Forecasted HEI Value
     """
     data = []
@@ -28,10 +28,12 @@ st.title("HEI Forecast Calculator")
 
 # Primary inputs
 home_value = st.number_input("Home Value ($)", value=1000000.0, step=1000.0)
+
 # Appreciation entered as a whole number percentage (e.g., 3 for 3%)
 appreciation_input = st.number_input("Appreciation Rate (Annual %)", value=3.0, step=0.1)
-# Convert the percentage to a decimal
+# Convert the whole number percentage to a decimal
 appreciation = appreciation_input / 100.0
+
 origination_date = st.date_input("Origination Date", value=datetime.date(2023, 12, 11))
 
 # Inputs for Option Value calculation
@@ -58,10 +60,12 @@ if st.button("Generate 120-Month Forecast"):
     # For each month, apply the cap to the Option Value.
     forecast_df["Capped Option Value"] = forecast_df["Option Value"].apply(lambda x: min(x, cap_amount))
     
-    # Display the forecast table with the new column.
+    # Display the forecast table with all the columns.
     st.write("### 120-Month HEI Forecast")
-    st.dataframe(forecast_df.style.format({
-        "Forecasted HEI Value": "$ {:,.2f}",
-        "Option Value": "$ {:,.2f}",
-        "Capped Option Value": "$ {:,.2f}"
-    }))
+    st.dataframe(
+        forecast_df.style.format({
+            "Forecasted HEI Value": "$ {:,.2f}",
+            "Option Value": "$ {:,.2f}",
+            "Capped Option Value": "$ {:,.2f}"
+        })
+    )
