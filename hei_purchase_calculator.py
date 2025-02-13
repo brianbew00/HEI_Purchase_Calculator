@@ -99,7 +99,7 @@ if submitted:
         "Investor Cap Value": "Investor Cap"
     }, inplace=True)
     
-    # Add Acquisition Premium:
+    # Add Acquisition Premium (to be renamed "Discount"):
     # Acquisition Premium = max(1 - (Investor Cap / Contract Value), 0)
     forecast_df["Acquisition Premium"] = forecast_df.apply(
         lambda row: max(1 - (row["Investor Cap"] / row["Contract Value"]), 0),
@@ -111,7 +111,7 @@ if submitted:
     forecast_df["Settlement Value"] = np.minimum(forecast_df["Contract Value"], forecast_df["Investor Cap"])
     
     # Compute Acquisition Values:
-    # Secondary Market Value - Acquisition = Settlement Value * (1 + Acquisition Premium/Discount)
+    # Acquisition (Value) = Settlement Value * (1 + Acquisition Premium/Discount)
     forecast_df["Secondary Market Value - Acquisition"] = forecast_df["Settlement Value"] * (1 + acq_premium)
     # Initialize Acquisition Investment column with 0.
     forecast_df["Secondary Market Investment (Acquisition)"] = 0.0
@@ -126,7 +126,7 @@ if submitted:
         forecast_df.loc[target_month_acq, "Secondary Market Value - Acquisition"]
     
     # Compute Disposition Values:
-    # Secondary Market Value (Disposition) = Settlement Value * (1 + Disposition Premium/Discount)
+    # Disposition (Value) = Settlement Value * (1 + Disposition Premium/Discount)
     forecast_df["Secondary Market Value (Disposition)"] = forecast_df["Settlement Value"] * (1 + disp_premium)
     # Initialize Disposition Investment column with 0.
     forecast_df["Secondary Market Investment (Disposition)"] = 0.0
@@ -141,13 +141,28 @@ if submitted:
     forecast_df.loc[target_month_disp, "Secondary Market Investment (Disposition)"] = \
         forecast_df.loc[target_month_disp, "Secondary Market Value (Disposition)"]
     
-    # Rename the secondary market columns to shorter labels.
+    # Rename secondary market columns to shorter labels.
     forecast_df.rename(columns={
         "Secondary Market Value - Acquisition": "Acquisition (Value)",
         "Secondary Market Investment (Acquisition)": "Acquisition (Investment)",
         "Secondary Market Value (Disposition)": "Disposition (Value)",
-        "Secondary Market Investment (Disposition)": "Disposition (Investment)"
+        "Secondary Market Investment (Disposition)": "Disposition (Investment)",
+        "Acquisition Premium": "Discount"
     }, inplace=True)
+    
+    # Now, add a new column for Annualized Returns: "First Investor Return"
+    # For rows from (target_month_acq + 1) up to target_month_disp, compute:
+    # First Investor Return = ( (Disposition (Investment) / Acquisition (Investment))^(12 / (i - target_month_acq)) ) - 1
+    forecast_df["First Investor Return"] = np.nan  # initialize with NaN
+    # Grab the acquisition and disposition investment values from their target rows.
+    acq_invest = forecast_df.loc[target_month_acq, "Acquisition (Investment)"]
+    disp_invest = forecast_df.loc[target_month_disp, "Disposition (Investment)"]
+    # Loop over rows from target_month_acq + 1 to target_month_disp (inclusive)
+    for i in range(target_month_acq + 1, target_month_disp + 1):
+        months_held = i - target_month_acq
+        # Calculate annualized return using the ratio and convert to an annualized rate.
+        # (Note: This formula uses 12 / months_held to annualize a monthly return.)
+        forecast_df.loc[i, "First Investor Return"] = (disp_invest / acq_invest) ** (12 / months_held) - 1
     
     # Reorder columns for display.
     final_cols = [
@@ -155,12 +170,13 @@ if submitted:
         "Home Value", 
         "Contract Value", 
         "Investor Cap", 
-        "Acquisition Premium", 
+        "Discount", 
         "Settlement Value", 
         "Acquisition (Value)", 
         "Acquisition (Investment)",
         "Disposition (Value)",
-        "Disposition (Investment)"
+        "Disposition (Investment)",
+        "First Investor Return"
     ]
     forecast_df = forecast_df[final_cols]
     
@@ -170,11 +186,12 @@ if submitted:
             "Home Value": "$ {:,.2f}",
             "Contract Value": "$ {:,.2f}",
             "Investor Cap": "$ {:,.2f}",
-            "Acquisition Premium": "{:.2%}",
+            "Discount": "{:.2%}",
             "Settlement Value": "$ {:,.2f}",
             "Acquisition (Value)": "$ {:,.2f}",
             "Acquisition (Investment)": "$ {:,.2f}",
             "Disposition (Value)": "$ {:,.2f}",
-            "Disposition (Investment)": "$ {:,.2f}"
+            "Disposition (Investment)": "$ {:,.2f}",
+            "First Investor Return": "{:.2%}"
         })
     )
