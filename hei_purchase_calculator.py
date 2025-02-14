@@ -62,7 +62,6 @@ with st.form(key="forecast_form"):
         acq_premium = acq_premium_input / 100.0
         acq_method = st.radio("Determine acquisition by:", options=["Contract Age (months)", "Purchase Date"], key="acq_method")
         if acq_method == "Contract Age (months)":
-            # Default contract age now set to 4 months.
             sec_contract_age = st.number_input("Contract Age (months)", value=4, step=1)
             sec_purchase_date = None
         else:
@@ -74,7 +73,6 @@ with st.form(key="forecast_form"):
         disp_premium = disp_premium_input / 100.0
         disp_method = st.radio("Determine disposition by:", options=["Hold Period (months)", "Sale Date"], key="disp_method")
         if disp_method == "Hold Period (months)":
-            # Default hold period now set to 18 months.
             hold_period_months = st.number_input("Hold Period (months)", value=18, step=1)
             sale_date = None
         else:
@@ -158,7 +156,6 @@ if submitted:
     # Create a datetime column for charting.
     forecast_df["Date_dt"] = pd.to_datetime(forecast_df["Date"], format="%m/%d/%Y")
     
-    # Save forecast_df and target months in session state.
     st.session_state.forecast_df = forecast_df.copy()
     st.session_state.target_month_acq = target_month_acq
     st.session_state.target_month_disp = target_month_disp
@@ -180,7 +177,7 @@ if "forecast_df" in st.session_state:
         chart_returns = alt.Chart(returns_df).mark_bar().encode(
             x=alt.X("Month:Q", title="Month", scale=alt.Scale(domain=[target_month_acq, 120])),
             y=alt.Y("Return:Q", title="Annualized Return", 
-                    axis=alt.Axis(format=".2%", labelFontSize=12, titleFontSize=12, labelPadding=20, titlePadding=20)),
+                    axis=alt.Axis(format=".2%", labelFontSize=12, titleFontSize=12, labelPadding=20, titlePadding=20, offset=50)),
             color=alt.Color("Return Type:N", title=""),
             tooltip=[
                 alt.Tooltip("Month:Q", title="Month"),
@@ -189,7 +186,7 @@ if "forecast_df" in st.session_state:
             ]
         ).properties(height=400, width=1400)
         chart_returns = chart_returns.configure_legend(orient='top')
-        st.altair_chart(chart_returns, use_container_width=True)
+        st.altair_chart(chart_returns, use_container_width=False)
     else:
         metrics_df = forecast_df_reset[["Month", "Date", "Contract Value", "Investor Cap", "Settlement Value"]].melt(
             id_vars=["Month", "Date"], var_name="Metric", value_name="Value"
@@ -197,7 +194,7 @@ if "forecast_df" in st.session_state:
         chart_metrics = alt.Chart(metrics_df).mark_line().encode(
             x=alt.X("Month:Q", title="Month"),
             y=alt.Y("Value:Q", title="Value ($)", 
-                    axis=alt.Axis(format="$,s", labelFontSize=12, titleFontSize=12, labelPadding=20, titlePadding=20)),
+                    axis=alt.Axis(format="$,s", labelFontSize=12, titleFontSize=12, labelPadding=20, titlePadding=20, offset=50)),
             color=alt.Color("Metric:N", title=""),
             tooltip=[
                 alt.Tooltip("Month:Q", title="Month"),
@@ -206,7 +203,7 @@ if "forecast_df" in st.session_state:
             ]
         ).properties(height=400, width=1400)
         chart_metrics = chart_metrics.configure_legend(orient='top')
-        st.altair_chart(chart_metrics, use_container_width=True)
+        st.altair_chart(chart_metrics, use_container_width=False)
     
     table_df = forecast_df.drop(columns=["Date_dt"])
     st.write("### 120-Month HEI Forecast")
