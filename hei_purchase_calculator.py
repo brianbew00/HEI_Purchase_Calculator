@@ -150,18 +150,22 @@ if submitted:
     }, inplace=True)
     
     # Add new column for Annualized Returns ("First Investor Return")
-    # For each row i from (target_month_acq + 1) up to target_month_disp (inclusive),
-    # compute: 
-    #    First Investor Return = ((Disposition (Value)_i / Acquisition (Investment)_target)^(12 / (i - target_month_acq))) - 1
+    # For each row i from (target_month_acq + 1) to target_month_disp (inclusive):
+    # First Investor Return = ((Disposition (Value)_i / Acquisition (Investment)_target)^(12 / (i - target_month_acq))) - 1
     forecast_df["First Investor Return"] = np.nan  # initialize with NaN
-    # Retrieve the constant acquisition investment from the target acquisition row.
     acq_invest = forecast_df.loc[target_month_acq, "Acquisition (Investment)"]
-    # Loop over rows from target_month_acq+1 to target_month_disp (inclusive)
     for i in range(target_month_acq + 1, target_month_disp + 1):
         months_held = i - target_month_acq
-        # Calculate annualized return using the ratio from the current row's Disposition (Value).
-        # This represents the annualized return if the investor sold in month i.
         forecast_df.loc[i, "First Investor Return"] = (forecast_df.loc[i, "Disposition (Value)"] / acq_invest) ** (12 / months_held) - 1
+
+    # Add new column for Second Investor Return.
+    # Second Investor Return = ((Settlement Value_i / (Disposition (Investment)_target))^(12 / (i - target_month_disp))) - 1
+    # Here, the acquisition price for the second investor is the first investor’s disposition investment.
+    forecast_df["Second Investor Return"] = np.nan  # initialize with NaN
+    second_acq = forecast_df.loc[target_month_disp, "Disposition (Investment)"]
+    for i in range(target_month_disp + 1, forecast_df.index[-1] + 1):
+        months_held = i - target_month_disp
+        forecast_df.loc[i, "Second Investor Return"] = (forecast_df.loc[i, "Settlement Value"] / second_acq) ** (12 / months_held) - 1
     
     # Reorder columns for display.
     final_cols = [
@@ -175,7 +179,8 @@ if submitted:
         "Acquisition (Investment)",
         "Disposition (Value)",
         "Disposition (Investment)",
-        "First Investor Return"
+        "First Investor Return",
+        "Second Investor Return"
     ]
     forecast_df = forecast_df[final_cols]
     
@@ -191,6 +196,7 @@ if submitted:
             "Acquisition (Investment)": "$ {:,.2f}",
             "Disposition (Value)": "$ {:,.2f}",
             "Disposition (Investment)": "$ {:,.2f}",
-            "First Investor Return": "{:.2%}"
+            "First Investor Return": "{:.2%}",
+            "Second Investor Return": "{:.2%}"
         })
     )
