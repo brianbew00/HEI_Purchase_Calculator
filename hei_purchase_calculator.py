@@ -168,42 +168,55 @@ if "forecast_df" in st.session_state:
     # Chart select box above the table.
     chart_view = st.selectbox("Select Chart View", ["Investor Returns", "Contract Metrics"])
     
-    if chart_view == "Investor Returns":
-        returns_df = forecast_df_reset[["Month", "Date", "First Investor Return", "Second Investor Return"]].melt(
-            id_vars=["Month", "Date"], var_name="Return Type", value_name="Return"
-        )
-        # Filter rows where Month is between target_month_acq and 120.
-        target_month_acq = st.session_state.target_month_acq
-        returns_df = returns_df[(returns_df["Month"] >= target_month_acq) & (returns_df["Month"] <= 120)]
-        returns_df = returns_df[returns_df["Return"].notnull()]
-        chart_returns = alt.Chart(returns_df).mark_bar().encode(
-            x=alt.X("Month:Q", title="Month", scale=alt.Scale(domain=[target_month_acq, 120])),
-            y=alt.Y("Return:Q", title="Annualized Return", axis=alt.Axis(format=".2%", labelFontSize=12, titleFontSize=12, labelPadding=5)),
-            color=alt.Color("Return Type:N", title=""),
-            tooltip=[
-                alt.Tooltip("Month:Q", title="Month"),
-                alt.Tooltip("Date:N", title="Date"),
-                alt.Tooltip("Return:Q", title="Return", format=".2%")
-            ]
-        ).properties(height=400, width=1200)
-        chart_returns = chart_returns.configure_legend(orient='top')
-        st.altair_chart(chart_returns, use_container_width=True)
-    else:
-        metrics_df = forecast_df_reset[["Month", "Date", "Contract Value", "Investor Cap", "Settlement Value"]].melt(
-            id_vars=["Month", "Date"], var_name="Metric", value_name="Value"
-        )
-        chart_metrics = alt.Chart(metrics_df).mark_line().encode(
-            x=alt.X("Month:Q", title="Month"),
-            y=alt.Y("Value:Q", title="Value ($)", axis=alt.Axis(format="$,s", labelFontSize=12, titleFontSize=12, labelPadding=5)),
-            color=alt.Color("Metric:N", title=""),
-            tooltip=[
-                alt.Tooltip("Month:Q", title="Month"),
-                alt.Tooltip("Date:N", title="Date"),
-                alt.Tooltip("Value:Q", title="Value", format="$,.2f")
-            ]
-        ).properties(height=400, width=1200)
-        chart_metrics = chart_metrics.configure_legend(orient='top')
-        st.altair_chart(chart_metrics, use_container_width=True)
+if chart_view == "Investor Returns":
+    # Limit returns to rows from target_month_acq to month 120.
+    returns_df = forecast_df_reset[["Month", "Date", "First Investor Return", "Second Investor Return"]].melt(
+        id_vars=["Month", "Date"], var_name="Return Type", value_name="Return"
+    )
+    # Filter rows where Month is between target_month_acq and 120.
+    target_month_acq = st.session_state.target_month_acq
+    returns_df = returns_df[(returns_df["Month"] >= target_month_acq) & (returns_df["Month"] <= 120)]
+    returns_df = returns_df[returns_df["Return"].notnull()]
+    chart_returns = alt.Chart(returns_df).mark_bar().encode(
+        x=alt.X("Month:Q", title="Month", scale=alt.Scale(domain=[target_month_acq, 120])),
+        y=alt.Y("Return:Q", title="Annualized Return", axis=alt.Axis(format=".2%")),
+        color=alt.Color("Return Type:N", title=""),
+        tooltip=[
+            alt.Tooltip("Month:Q", title="Month"),
+            alt.Tooltip("Date:N", title="Date"),
+            alt.Tooltip("Return:Q", title="Return", format=".2%")
+        ]
+    ).properties(height=400, width=1200)\
+     .configure_legend(orient='top')\
+     .configure_axisY(
+         labelFontSize=12, 
+         titleFontSize=12, 
+         labelPadding=20, 
+         titlePadding=20
+     )
+    st.altair_chart(chart_returns, use_container_width=True)
+else:
+    metrics_df = forecast_df_reset[["Month", "Date", "Contract Value", "Investor Cap", "Settlement Value"]].melt(
+        id_vars=["Month", "Date"], var_name="Metric", value_name="Value"
+    )
+    chart_metrics = alt.Chart(metrics_df).mark_line().encode(
+        x=alt.X("Month:Q", title="Month"),
+        y=alt.Y("Value:Q", title="Value ($)", axis=alt.Axis(format="$,s")),
+        color=alt.Color("Metric:N", title=""),
+        tooltip=[
+            alt.Tooltip("Month:Q", title="Month"),
+            alt.Tooltip("Date:N", title="Date"),
+            alt.Tooltip("Value:Q", title="Value", format="$,.2f")
+        ]
+    ).properties(height=400, width=1200)\
+     .configure_legend(orient='top')\
+     .configure_axisY(
+         labelFontSize=12, 
+         titleFontSize=12, 
+         labelPadding=20, 
+         titlePadding=20
+     )
+    st.altair_chart(chart_metrics, use_container_width=True)
     
     table_df = forecast_df.drop(columns=["Date_dt"])
     st.write("### 120-Month HEI Forecast")
