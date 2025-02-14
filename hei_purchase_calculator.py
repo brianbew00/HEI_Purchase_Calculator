@@ -36,7 +36,7 @@ with st.form(key="forecast_form"):
     with col2:
         appreciation_input = st.number_input("Appreciation Rate (Annual %)", value=3.0, step=0.1)
     with col3:
-        # Using text input for origination date in MM/DD/YYYY format.
+        # Use text input for origination date.
         origination_date_str = st.text_input("Origination Date (MM/DD/YYYY)", value="12/11/2023")
         try:
             origination_date = datetime.datetime.strptime(origination_date_str, "%m/%d/%Y").date()
@@ -64,6 +64,7 @@ with st.form(key="forecast_form"):
         acq_premium = acq_premium_input / 100.0
         acq_method = st.radio("Determine acquisition by:", options=["Contract Age (months)", "Purchase Date"], key="acq_method")
         if acq_method == "Contract Age (months)":
+            # Default contract age now set to 4 months.
             sec_contract_age = st.number_input("Contract Age (months)", value=4, step=1)
             sec_purchase_date = None
         else:
@@ -75,6 +76,7 @@ with st.form(key="forecast_form"):
         disp_premium = disp_premium_input / 100.0
         disp_method = st.radio("Determine disposition by:", options=["Hold Period (months)", "Sale Date"], key="disp_method")
         if disp_method == "Hold Period (months)":
+            # Default hold period set to 18 months.
             hold_period_months = st.number_input("Hold Period (months)", value=18, step=1)
             sale_date = None
         else:
@@ -84,7 +86,7 @@ with st.form(key="forecast_form"):
     submitted = st.form_submit_button(label="Generate 120-Month Forecast")
 
 if submitted:
-    # Generate the 120-month forecast.
+    # Generate the forecast.
     forecast_df = calculate_forecast(home_value, appreciation, origination_date, months=120)
     
     # Calculate Contract Value.
@@ -161,34 +163,31 @@ if submitted:
     # Save forecast_df in session state.
     st.session_state.forecast_df = forecast_df.copy()
 
-# Ensure forecast_df is stored in session_state (from previous code)
+# If forecast_df is in session state, display charts and table.
 if "forecast_df" in st.session_state:
     forecast_df = st.session_state.forecast_df.copy()
     
-    # Create a new datetime column for additional date info (optional)
-    # (We already have the "Date" column as a formatted string)
+    # Reset index so that Month is a column.
+    forecast_df_reset = forecast_df.reset_index()  # "Month" column available.
     
-    # Reset the index so that the row index becomes a column named "Month"
-    forecast_df_reset = forecast_df.reset_index()  # "Month" column now available
-    
-    # Select chart view appears above the table.
+    # Chart select box (above the table).
     chart_view = st.selectbox("Select Chart View", ["Investor Returns", "Contract Metrics"])
     
     if chart_view == "Investor Returns":
+        # Filter returns: limit to rows from target_month_acq to month 120.
         returns_df = forecast_df_reset[["Month", "Date", "First Investor Return", "Second Investor Return"]].melt(
             id_vars=["Month", "Date"], var_name="Return Type", value_name="Return"
         )
+        returns_df = returns_df[(returns_df["Month"] >= target_month_acq) & (returns_df["Month"] <= 120)]
         returns_df = returns_df[returns_df["Return"].notnull()]
         chart_returns = alt.Chart(returns_df).mark_bar().encode(
             x=alt.X("Month:Q", title="Month"),
             y=alt.Y("Return:Q", title="Annualized Return", axis=alt.Axis(format=".2%")),
             color=alt.Color("Return Type:N", title=""),
-            tooltip=[
-                alt.Tooltip("Month:Q", title="Month"),
-                alt.Tooltip("Date:N", title="Date"),
-                alt.Tooltip("Return:Q", title="Return", format=".2%")
-            ]
-        ).configure_legend(orient='top')
+            tooltip=[alt.Tooltip("Month:Q", title="Month"),
+                     alt.Tooltip("Date:N", title="Date"),
+                     alt.Tooltip("Return:Q", title="Return", format=".2%")]
+        ).properties(height=400).configure_legend(orient='top')
         st.altair_chart(chart_returns, use_container_width=True)
     else:
         metrics_df = forecast_df_reset[["Month", "Date", "Contract Value", "Investor Cap", "Settlement Value"]].melt(
@@ -198,19 +197,18 @@ if "forecast_df" in st.session_state:
             x=alt.X("Month:Q", title="Month"),
             y=alt.Y("Value:Q", title="Value ($)", axis=alt.Axis(format="$,s")),
             color=alt.Color("Metric:N", title=""),
-            tooltip=[
-                alt.Tooltip("Month:Q", title="Month"),
-                alt.Tooltip("Date:N", title="Date"),
-                alt.Tooltip("Value:Q", title="Value", format="$,.2f")
-            ]
-        ).configure_legend(orient='top')
+            tooltip=[alt.Tooltip("Month:Q", title="Month"),
+                     alt.Tooltip("Date:N", title="Date"),
+                     alt.Tooltip("Value:Q", title="Value", format="$,.2f")]
+        ).properties(height=400).configure_legend(orient='top')
         st.altair_chart(chart_metrics, use_container_width=True)
     
-    # Display the table below the charts.
-    # We drop the "Date_dt" column if it exists, or simply display the forecast_df.
+    # Prepare table for display by dropping Date_dt.
+    table_df = forecast_df.drop(columns=["Date_dt"])
+    
     st.write("### 120-Month HEI Forecast")
     st.dataframe(
-        forecast_df.style.format({
+        table_df.style.format({
             "Home Value": "$ {:,.2f}",
             "Contract Value": "$ {:,.2f}",
             "Investor Cap": "$ {:,.2f}",
