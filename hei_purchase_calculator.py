@@ -202,7 +202,7 @@ if "forecast_df" in st.session_state:
                 alt.Tooltip("Date:N", title="Date"),
                 alt.Tooltip("Value:Q", title="Value", format="$,.2f")
             ]
-        ).properties(height=400, width=1200)
+        ).properties(height=400, width=1400)
         chart_metrics = chart_metrics.configure_legend(orient='top')
         st.altair_chart(chart_metrics, use_container_width=True)
     
