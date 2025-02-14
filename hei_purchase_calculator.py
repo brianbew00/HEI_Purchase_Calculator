@@ -36,14 +36,14 @@ with st.form(key="forecast_form"):
     with col2:
         appreciation_input = st.number_input("Appreciation Rate (Annual %)", value=3.0, step=0.1)
     with col3:
-        # Use a text input for origination date in MM/DD/YYYY format.
+        # Using text input for origination date in MM/DD/YYYY format.
         origination_date_str = st.text_input("Origination Date (MM/DD/YYYY)", value="12/11/2023")
         try:
             origination_date = datetime.datetime.strptime(origination_date_str, "%m/%d/%Y").date()
         except ValueError:
             st.error("Date must be in MM/DD/YYYY format")
             st.stop()
-    # Convert appreciation from whole number to decimal.
+    # Convert appreciation to decimal.
     appreciation = appreciation_input / 100.0
 
     st.subheader("Option & Investor Inputs")
@@ -84,7 +84,7 @@ with st.form(key="forecast_form"):
     submitted = st.form_submit_button(label="Generate 120-Month Forecast")
 
 if submitted:
-    # Generate the forecast.
+    # Generate the 120-month forecast.
     forecast_df = calculate_forecast(home_value, appreciation, origination_date, months=120)
     
     # Calculate Contract Value.
@@ -154,7 +154,7 @@ if submitted:
     for i in range(target_month_disp + 1, forecast_df.index[-1] + 1):
         months_held = i - target_month_disp
         forecast_df.loc[i, "Second Investor Return"] = (forecast_df.loc[i, "Settlement Value"] / second_acq) ** (12 / months_held) - 1
-    
+
     # Create a datetime column for charting.
     forecast_df["Date_dt"] = pd.to_datetime(forecast_df["Date"], format="%m/%d/%Y")
     
@@ -164,7 +164,7 @@ if submitted:
 if "forecast_df" in st.session_state:
     forecast_df = st.session_state.forecast_df.copy()
     
-    # Chart select box appears above the table.
+    # Chart select box above the table.
     chart_view = st.selectbox("Select Chart View", ["Investor Returns", "Contract Metrics"])
     
     if chart_view == "Investor Returns":
@@ -176,7 +176,7 @@ if "forecast_df" in st.session_state:
             x=alt.X("Date_dt:T", title="Date"),
             y=alt.Y("Return:Q", title="Annualized Return", axis=alt.Axis(format=".2%")),
             color="Return Type:N"
-        ).properties(title="Investor Returns Over Time")
+        ).configure_legend(orient='top')
         st.altair_chart(chart_returns, use_container_width=True)
     else:
         metrics_df = forecast_df[["Date_dt", "Contract Value", "Investor Cap", "Settlement Value"]].melt(
@@ -186,10 +186,10 @@ if "forecast_df" in st.session_state:
             x=alt.X("Date_dt:T", title="Date"),
             y=alt.Y("Value:Q", title="Value ($)", axis=alt.Axis(format="$,s")),
             color="Metric:N"
-        ).properties(title="Contract Metrics Over Time")
+        ).configure_legend(orient='top')
         st.altair_chart(chart_metrics, use_container_width=True)
     
-    # Prepare table for display by dropping the Date_dt column.
+    # Prepare table for display by dropping Date_dt.
     table_df = forecast_df.drop(columns=["Date_dt"])
     
     st.write("### 120-Month HEI Forecast")
