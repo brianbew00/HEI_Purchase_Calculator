@@ -190,7 +190,7 @@ if "forecast_df" in st.session_state:
             ]
         ).properties(height=400)
         # Configure legend at the top.
-        chart_returns = chart_returns.configure_legend(orient='top').configure_axisY(labelPadding=-20, titlePadding=20)
+        chart_returns = chart_returns.configure_legend(orient='top').configure_axisY(labelPadding=-10, titlePadding=20)
         st.altair_chart(chart_returns, use_container_width=True)
     else:
         metrics_df = forecast_df_reset[["Month", "Date", "Contract Value", "Investor Cap", "Settlement Value"]].melt(
@@ -206,7 +206,7 @@ if "forecast_df" in st.session_state:
                 alt.Tooltip("Value:Q", title="Value", format="$,.2f")
             ]
         ).properties(height=400)
-        chart_metrics = chart_metrics.configure_legend(orient='top').configure_axisY(labelPadding=-20, titlePadding=20)
+        chart_metrics = chart_metrics.configure_legend(orient='top').configure_axisY(labelPadding=-10, titlePadding=20)
         st.altair_chart(chart_metrics, use_container_width=True)
     
     # Prepare table for display by dropping Date_dt.
