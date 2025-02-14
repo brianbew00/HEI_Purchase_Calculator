@@ -36,8 +36,13 @@ with st.form(key="forecast_form"):
     with col2:
         appreciation_input = st.number_input("Appreciation Rate (Annual %)", value=3.0, step=0.1)
     with col3:
-        # Update label to include desired format.
-        origination_date = st.date_input("Origination Date (MM/DD/YYYY)", value=datetime.date(2023, 12, 11))
+        # Use a text input for origination date in MM/DD/YYYY format.
+        origination_date_str = st.text_input("Origination Date (MM/DD/YYYY)", value="12/11/2023")
+        try:
+            origination_date = datetime.datetime.strptime(origination_date_str, "%m/%d/%Y").date()
+        except ValueError:
+            st.error("Date must be in MM/DD/YYYY format")
+            st.stop()
     # Convert appreciation from whole number to decimal.
     appreciation = appreciation_input / 100.0
 
@@ -59,7 +64,7 @@ with st.form(key="forecast_form"):
         acq_premium = acq_premium_input / 100.0
         acq_method = st.radio("Determine acquisition by:", options=["Contract Age (months)", "Purchase Date"], key="acq_method")
         if acq_method == "Contract Age (months)":
-            sec_contract_age = st.number_input("Contract Age (months)", value=4, step=1)  # Changed default to 4 months.
+            sec_contract_age = st.number_input("Contract Age (months)", value=4, step=1)
             sec_purchase_date = None
         else:
             sec_purchase_date = st.date_input("Secondary Purchase Date", value=datetime.date(2024, 12, 11), key="acq_date")
@@ -70,7 +75,7 @@ with st.form(key="forecast_form"):
         disp_premium = disp_premium_input / 100.0
         disp_method = st.radio("Determine disposition by:", options=["Hold Period (months)", "Sale Date"], key="disp_method")
         if disp_method == "Hold Period (months)":
-            hold_period_months = st.number_input("Hold Period (months)", value=18, step=1)  # Changed default to 18 months.
+            hold_period_months = st.number_input("Hold Period (months)", value=18, step=1)
             sale_date = None
         else:
             sale_date = st.date_input("Sale Date", value=datetime.date(2029, 12, 11), key="disp_date")
@@ -149,14 +154,13 @@ if submitted:
     for i in range(target_month_disp + 1, forecast_df.index[-1] + 1):
         months_held = i - target_month_disp
         forecast_df.loc[i, "Second Investor Return"] = (forecast_df.loc[i, "Settlement Value"] / second_acq) ** (12 / months_held) - 1
-
+    
     # Create a datetime column for charting.
     forecast_df["Date_dt"] = pd.to_datetime(forecast_df["Date"], format="%m/%d/%Y")
     
-    # Save forecast_df in session_state.
+    # Save forecast_df in session state.
     st.session_state.forecast_df = forecast_df.copy()
 
-# Display charts and table if forecast exists.
 if "forecast_df" in st.session_state:
     forecast_df = st.session_state.forecast_df.copy()
     
