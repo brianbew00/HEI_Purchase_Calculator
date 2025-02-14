@@ -28,7 +28,6 @@ def calculate_forecast(home_value, appreciation, origination_date, months=120):
 
 st.title("HEI Forecast Calculator")
 
-# Form section
 with st.form(key="forecast_form"):
     st.subheader("Primary Inputs")
     col1, col2, col3 = st.columns(3)
@@ -37,7 +36,8 @@ with st.form(key="forecast_form"):
     with col2:
         appreciation_input = st.number_input("Appreciation Rate (Annual %)", value=3.0, step=0.1)
     with col3:
-        origination_date = st.date_input("Origination Date", value=datetime.date(2023, 12, 11))
+        # Update label to include desired format.
+        origination_date = st.date_input("Origination Date (MM/DD/YYYY)", value=datetime.date(2023, 12, 11))
     # Convert appreciation from whole number to decimal.
     appreciation = appreciation_input / 100.0
 
@@ -58,9 +58,8 @@ with st.form(key="forecast_form"):
         acq_premium_input = st.number_input("Acquisition Premium / Discount (%)", value=6.0, step=0.1)
         acq_premium = acq_premium_input / 100.0
         acq_method = st.radio("Determine acquisition by:", options=["Contract Age (months)", "Purchase Date"], key="acq_method")
-        # Change default contract age to 4 months.
         if acq_method == "Contract Age (months)":
-            sec_contract_age = st.number_input("Contract Age (months)", value=4, step=1)
+            sec_contract_age = st.number_input("Contract Age (months)", value=4, step=1)  # Changed default to 4 months.
             sec_purchase_date = None
         else:
             sec_purchase_date = st.date_input("Secondary Purchase Date", value=datetime.date(2024, 12, 11), key="acq_date")
@@ -70,9 +69,8 @@ with st.form(key="forecast_form"):
         disp_premium_input = st.number_input("Disposition Premium / (Discount) (%)", value=6.0, step=0.1)
         disp_premium = disp_premium_input / 100.0
         disp_method = st.radio("Determine disposition by:", options=["Hold Period (months)", "Sale Date"], key="disp_method")
-        # Change default hold period to 18 months.
         if disp_method == "Hold Period (months)":
-            hold_period_months = st.number_input("Hold Period (months)", value=18, step=1)
+            hold_period_months = st.number_input("Hold Period (months)", value=18, step=1)  # Changed default to 18 months.
             sale_date = None
         else:
             sale_date = st.date_input("Sale Date", value=datetime.date(2029, 12, 11), key="disp_date")
@@ -80,9 +78,8 @@ with st.form(key="forecast_form"):
 
     submitted = st.form_submit_button(label="Generate 120-Month Forecast")
 
-# Process form submission and compute forecast.
 if submitted:
-    # Generate the 120-month forecast.
+    # Generate the forecast.
     forecast_df = calculate_forecast(home_value, appreciation, origination_date, months=120)
     
     # Calculate Contract Value.
@@ -99,7 +96,7 @@ if submitted:
         "Investor Cap Value": "Investor Cap"
     }, inplace=True)
     
-    # Add Discount (formerly Acquisition Premium).
+    # Add Discount.
     forecast_df["Discount"] = forecast_df.apply(lambda row: max(1 - (row["Investor Cap"] / row["Contract Value"]), 0), axis=1)
     
     # Add Settlement Value.
@@ -122,7 +119,6 @@ if submitted:
     forecast_df["Secondary Market Value (Disposition)"] = forecast_df["Settlement Value"] * (1 + disp_premium)
     forecast_df["Secondary Market Investment (Disposition)"] = 0.0
     if disp_method == "Hold Period (months)":
-        # The disposition target month is acquisition target month + hold period.
         target_month_disp = int(target_month_acq) + int(hold_period_months)
     else:
         forecast_dates = pd.to_datetime(forecast_df["Date"], format="%m/%d/%Y")
@@ -154,36 +150,19 @@ if submitted:
         months_held = i - target_month_disp
         forecast_df.loc[i, "Second Investor Return"] = (forecast_df.loc[i, "Settlement Value"] / second_acq) ** (12 / months_held) - 1
 
-    # Reorder columns.
-    final_cols = [
-        "Date", 
-        "Home Value", 
-        "Contract Value", 
-        "Investor Cap", 
-        "Discount", 
-        "Settlement Value", 
-        "Acquisition (Value)", 
-        "Acquisition (Investment)",
-        "Disposition (Value)",
-        "Disposition (Investment)",
-        "First Investor Return",
-        "Second Investor Return"
-    ]
-    forecast_df = forecast_df[final_cols]
-    
-    # Save forecast_df in session state.
-    st.session_state.forecast_df = forecast_df
-
-# If forecast data exists, display charts and table.
-if "forecast_df" in st.session_state:
-    forecast_df = st.session_state.forecast_df.copy()
     # Create a datetime column for charting.
     forecast_df["Date_dt"] = pd.to_datetime(forecast_df["Date"], format="%m/%d/%Y")
     
-    # Select chart view.
+    # Save forecast_df in session_state.
+    st.session_state.forecast_df = forecast_df.copy()
+
+# Display charts and table if forecast exists.
+if "forecast_df" in st.session_state:
+    forecast_df = st.session_state.forecast_df.copy()
+    
+    # Chart select box appears above the table.
     chart_view = st.selectbox("Select Chart View", ["Investor Returns", "Contract Metrics"])
     
-    # Chart goes above the table.
     if chart_view == "Investor Returns":
         returns_df = forecast_df[["Date_dt", "First Investor Return", "Second Investor Return"]].melt(
             "Date_dt", var_name="Return Type", value_name="Return"
@@ -206,9 +185,12 @@ if "forecast_df" in st.session_state:
         ).properties(title="Contract Metrics Over Time")
         st.altair_chart(chart_metrics, use_container_width=True)
     
+    # Prepare table for display by dropping the Date_dt column.
+    table_df = forecast_df.drop(columns=["Date_dt"])
+    
     st.write("### 120-Month HEI Forecast")
     st.dataframe(
-        forecast_df.style.format({
+        table_df.style.format({
             "Home Value": "$ {:,.2f}",
             "Contract Value": "$ {:,.2f}",
             "Investor Cap": "$ {:,.2f}",
