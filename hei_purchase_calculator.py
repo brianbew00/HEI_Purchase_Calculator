@@ -99,9 +99,9 @@ if submitted:
         "Investor Cap Value": "Investor Cap"
     }, inplace=True)
     
-    # Add Acquisition Premium (to be renamed "Discount"):
-    # Acquisition Premium = max(1 - (Investor Cap / Contract Value), 0)
-    forecast_df["Acquisition Premium"] = forecast_df.apply(
+    # Add Discount (formerly Acquisition Premium):
+    # Discount = max(1 - (Investor Cap / Contract Value), 0)
+    forecast_df["Discount"] = forecast_df.apply(
         lambda row: max(1 - (row["Investor Cap"] / row["Contract Value"]), 0),
         axis=1
     )
@@ -131,7 +131,7 @@ if submitted:
     # Initialize Disposition Investment column with 0.
     forecast_df["Secondary Market Investment (Disposition)"] = 0.0
     if disp_method == "Hold Period (months)":
-        # The hold period is in addition to the acquisition target month.
+        # The target month for disposition is the acquisition target month plus the hold period.
         target_month_disp = int(target_month_acq) + int(hold_period_months)
     else:
         forecast_dates = pd.to_datetime(forecast_df["Date"], format="%m/%d/%Y")
@@ -146,23 +146,22 @@ if submitted:
         "Secondary Market Value - Acquisition": "Acquisition (Value)",
         "Secondary Market Investment (Acquisition)": "Acquisition (Investment)",
         "Secondary Market Value (Disposition)": "Disposition (Value)",
-        "Secondary Market Investment (Disposition)": "Disposition (Investment)",
-        "Acquisition Premium": "Discount"
+        "Secondary Market Investment (Disposition)": "Disposition (Investment)"
     }, inplace=True)
     
-    # Now, add a new column for Annualized Returns: "First Investor Return"
-    # For rows from (target_month_acq + 1) up to target_month_disp, compute:
-    # First Investor Return = ( (Disposition (Investment) / Acquisition (Investment))^(12 / (i - target_month_acq)) ) - 1
+    # Add new column for Annualized Returns ("First Investor Return")
+    # For each row i from (target_month_acq + 1) up to target_month_disp (inclusive),
+    # compute: 
+    #    First Investor Return = ((Disposition (Value)_i / Acquisition (Investment)_target)^(12 / (i - target_month_acq))) - 1
     forecast_df["First Investor Return"] = np.nan  # initialize with NaN
-    # Grab the acquisition and disposition investment values from their target rows.
+    # Retrieve the constant acquisition investment from the target acquisition row.
     acq_invest = forecast_df.loc[target_month_acq, "Acquisition (Investment)"]
-    disp_invest = forecast_df.loc[target_month_disp, "Disposition (Investment)"]
-    # Loop over rows from target_month_acq + 1 to target_month_disp (inclusive)
+    # Loop over rows from target_month_acq+1 to target_month_disp (inclusive)
     for i in range(target_month_acq + 1, target_month_disp + 1):
         months_held = i - target_month_acq
-        # Calculate annualized return using the ratio and convert to an annualized rate.
-        # (Note: This formula uses 12 / months_held to annualize a monthly return.)
-        forecast_df.loc[i, "First Investor Return"] = (disp_invest / acq_invest) ** (12 / months_held) - 1
+        # Calculate annualized return using the ratio from the current row's Disposition (Value).
+        # This represents the annualized return if the investor sold in month i.
+        forecast_df.loc[i, "First Investor Return"] = (forecast_df.loc[i, "Disposition (Value)"] / acq_invest) ** (12 / months_held) - 1
     
     # Reorder columns for display.
     final_cols = [
