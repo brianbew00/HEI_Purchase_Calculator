@@ -175,7 +175,7 @@ if "forecast_df" in st.session_state:
         chart_returns = alt.Chart(returns_df).mark_bar().encode(
             x=alt.X("Month:Q", title="Month", scale=alt.Scale(domain=[target_month_acq, 120])),
             y=alt.Y("Return:Q", title="Annualized Return", 
-                    axis=alt.Axis(format=".2%", labelFontSize=12, titleFontSize=12, labelPadding=0, titlePadding=40)),
+                    axis=alt.Axis(format=".2%", labelFontSize=12, titleFontSize=12, labelPadding=0, titlePadding=50)),
             color=alt.Color("Return Type:N", title=""),
             tooltip=[alt.Tooltip("Month:Q", title="Month"),
                      alt.Tooltip("Date:N", title="Date"),
@@ -190,7 +190,7 @@ if "forecast_df" in st.session_state:
         chart_metrics = alt.Chart(metrics_df).mark_line().encode(
             x=alt.X("Month:Q", title="Month"),
             y=alt.Y("Value:Q", title="Value ($)", 
-                    axis=alt.Axis(format="$,s", labelFontSize=12, titleFontSize=12, labelPadding=0, titlePadding=40)),
+                    axis=alt.Axis(format="$,s", labelFontSize=12, titleFontSize=12, labelPadding=0, titlePadding=50)),
             color=alt.Color("Metric:N", title=""),
             tooltip=[alt.Tooltip("Month:Q", title="Month"),
                      alt.Tooltip("Date:N", title="Date"),
