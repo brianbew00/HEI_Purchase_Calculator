@@ -6,7 +6,7 @@ import altair as alt
 
 def calculate_forecast(home_value, appreciation, origination_date, months=120):
     """
-    Forecast the home's value month-by-month using the formula:
+    Forecast the home's value month-by-month using:
       Home Value = home_value * (1 + appreciation)^(month / 12)
     where appreciation is in decimal form.
     
@@ -21,6 +21,7 @@ def calculate_forecast(home_value, appreciation, origination_date, months=120):
         # Format the date as MM/DD/YYYY
         formatted_date = forecast_date.strftime('%m/%d/%Y')
         data.append((formatted_date, forecasted_value))
+    
     df = pd.DataFrame(data, columns=["Date", "Forecasted HEI Value"])
     df.index.name = "Month"
     return df
@@ -77,30 +78,30 @@ with st.form(key="forecast_form"):
     submitted = st.form_submit_button(label="Generate 120-Month Forecast")
 
 if submitted:
-    # Generate the forecast.
+    # Compute the forecast and store in session_state.
     forecast_df = calculate_forecast(home_value, appreciation, origination_date, months=120)
     
-    # Calculate Contract Value:
+    # Calculate Contract Value.
     option_value_multiplier = (original_hei_amount / home_value) * multiplier
     forecast_df["Option Value"] = forecast_df["Forecasted HEI Value"] * option_value_multiplier
     
-    # Calculate Investor Cap:
+    # Calculate Investor Cap.
     forecast_df["Investor Cap Value"] = original_hei_amount * ((1 + investor_cap) ** (forecast_df.index / 12))
     
-    # Rename columns:
+    # Rename columns.
     forecast_df.rename(columns={
         "Forecasted HEI Value": "Home Value",
         "Option Value": "Contract Value",
         "Investor Cap Value": "Investor Cap"
     }, inplace=True)
     
-    # Add Discount (formerly Acquisition Premium):
+    # Add Discount.
     forecast_df["Discount"] = forecast_df.apply(lambda row: max(1 - (row["Investor Cap"] / row["Contract Value"]), 0), axis=1)
     
-    # Add Settlement Value:
+    # Add Settlement Value.
     forecast_df["Settlement Value"] = np.minimum(forecast_df["Contract Value"], forecast_df["Investor Cap"])
     
-    # Compute Acquisition Values:
+    # Compute Acquisition Values.
     forecast_df["Secondary Market Value - Acquisition"] = forecast_df["Settlement Value"] * (1 + acq_premium)
     forecast_df["Secondary Market Investment (Acquisition)"] = 0.0
     if acq_method == "Contract Age (months)":
@@ -113,7 +114,7 @@ if submitted:
     forecast_df.loc[target_month_acq, "Secondary Market Investment (Acquisition)"] = \
         forecast_df.loc[target_month_acq, "Secondary Market Value - Acquisition"]
     
-    # Compute Disposition Values:
+    # Compute Disposition Values.
     forecast_df["Secondary Market Value (Disposition)"] = forecast_df["Settlement Value"] * (1 + disp_premium)
     forecast_df["Secondary Market Investment (Disposition)"] = 0.0
     if disp_method == "Hold Period (months)":
@@ -165,6 +166,9 @@ if submitted:
     ]
     forecast_df = forecast_df[final_cols]
     
+    # Save forecast_df in session state.
+    st.session_state.forecast_df = forecast_df
+
     st.write("### 120-Month HEI Forecast")
     st.dataframe(
         forecast_df.style.format({
@@ -181,16 +185,20 @@ if submitted:
             "Second Investor Return": "{:.2%}"
         })
     )
-    
+
+# If forecast data exists in session state, display charts without resetting the calculator.
+if "forecast_df" in st.session_state:
+    forecast_df = st.session_state.forecast_df.copy()
     # Create a new datetime column for charting.
     forecast_df["Date_dt"] = pd.to_datetime(forecast_df["Date"], format="%m/%d/%Y")
     
-    # Use a select box to choose between two chart views.
     chart_view = st.selectbox("Select Chart View", ["Investor Returns", "Contract Metrics"])
     
     if chart_view == "Investor Returns":
-        # Melt the returns columns and use a bar chart.
-        returns_df = forecast_df[["Date_dt", "First Investor Return", "Second Investor Return"]].melt("Date_dt", var_name="Return Type", value_name="Return")
+        # Prepare returns data and use a bar chart.
+        returns_df = forecast_df[["Date_dt", "First Investor Return", "Second Investor Return"]].melt(
+            "Date_dt", var_name="Return Type", value_name="Return"
+        )
         returns_df = returns_df[returns_df["Return"].notnull()]
         chart_returns = alt.Chart(returns_df).mark_bar().encode(
             x=alt.X("Date_dt:T", title="Date"),
@@ -199,14 +207,13 @@ if submitted:
         ).properties(title="Investor Returns Over Time")
         st.altair_chart(chart_returns, use_container_width=True)
     else:
-        # Melt the contract metric columns.
-        metrics_df = forecast_df[["Date_dt", "Contract Value", "Investor Cap", "Settlement Value"]].melt("Date_dt", var_name="Metric", value_name="Value")
+        # Prepare contract metrics data and use a line chart.
+        metrics_df = forecast_df[["Date_dt", "Contract Value", "Investor Cap", "Settlement Value"]].melt(
+            "Date_dt", var_name="Metric", value_name="Value"
+        )
         chart_metrics = alt.Chart(metrics_df).mark_line().encode(
             x=alt.X("Date_dt:T", title="Date"),
             y=alt.Y("Value:Q", title="Value ($)", axis=alt.Axis(format="$,s")),
             color="Metric:N"
         ).properties(title="Contract Metrics Over Time")
         st.altair_chart(chart_metrics, use_container_width=True)
-    
-    # Store forecast_df in session state so the charts remain even if the selectbox is changed.
-    st.session_state.forecast_df = forecast_df
