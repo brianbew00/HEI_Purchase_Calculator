@@ -158,7 +158,7 @@ if submitted:
     for i in range(target_month_acq + 1, target_month_disp + 1):
         months_held = i - target_month_acq
         forecast_df.loc[i, "First Investor Return"] = (forecast_df.loc[i, "Disposition (Value)"] / acq_invest) ** (12 / months_held) - 1
-    
+
     # Add new column for Second Investor Return.
     # Second Investor Return = ((Settlement Value_i / (Disposition (Investment)_target))^(12 / (i - target_month_disp))) - 1
     forecast_df["Second Investor Return"] = np.nan  # initialize with NaN
@@ -200,3 +200,30 @@ if submitted:
             "Second Investor Return": "{:.2%}"
         })
     )
+    
+    # Create a new datetime column from Date for charting.
+    forecast_df["Date_dt"] = pd.to_datetime(forecast_df["Date"], format="%m/%d/%Y")
+    
+    # Create a select box to choose chart view.
+    chart_view = st.selectbox("Select Chart View", ["Investor Returns", "Contract Metrics"])
+    
+    if chart_view == "Investor Returns":
+        # Melt the returns columns.
+        returns_df = forecast_df[["Date_dt", "First Investor Return", "Second Investor Return"]].dropna()
+        returns_df = returns_df.melt("Date_dt", var_name="Return Type", value_name="Return")
+        chart_returns = alt.Chart(returns_df).mark_line().encode(
+            x=alt.X("Date_dt:T", title="Date"),
+            y=alt.Y("Return:Q", title="Annualized Return", axis=alt.Axis(format=".2%")),
+            color="Return Type:N"
+        ).properties(title="Investor Returns Over Time")
+        st.altair_chart(chart_returns, use_container_width=True)
+    else:
+        # Melt the contract metric columns.
+        metrics_df = forecast_df[["Date_dt", "Contract Value", "Investor Cap", "Settlement Value"]]
+        metrics_df = metrics_df.melt("Date_dt", var_name="Metric", value_name="Value")
+        chart_metrics = alt.Chart(metrics_df).mark_line().encode(
+            x=alt.X("Date_dt:T", title="Date"),
+            y=alt.Y("Value:Q", title="Value ($)", axis=alt.Axis(format="$,s")),
+            color="Metric:N"
+        ).properties(title="Contract Metrics Over Time")
+        st.altair_chart(chart_metrics, use_container_width=True)
