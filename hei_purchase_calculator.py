@@ -166,7 +166,7 @@ if submitted:
     for i in range(target_month_disp + 1, forecast_df.index[-1] + 1):
         months_held = i - target_month_disp
         forecast_df.loc[i, "Second Investor Return"] = (forecast_df.loc[i, "Settlement Value"] / second_acq) ** (12 / months_held) - 1
-    
+
     # Reorder columns for display.
     final_cols = [
         "Date", 
@@ -209,8 +209,9 @@ if submitted:
     
     if chart_view == "Investor Returns":
         # Melt the returns columns.
-        returns_df = forecast_df[["Date_dt", "First Investor Return", "Second Investor Return"]].dropna()
-        returns_df = returns_df.melt("Date_dt", var_name="Return Type", value_name="Return")
+        returns_df = forecast_df[["Date_dt", "First Investor Return", "Second Investor Return"]].melt("Date_dt", var_name="Return Type", value_name="Return")
+        # Filter out rows with missing return values.
+        returns_df = returns_df[returns_df["Return"].notnull()]
         chart_returns = alt.Chart(returns_df).mark_line().encode(
             x=alt.X("Date_dt:T", title="Date"),
             y=alt.Y("Return:Q", title="Annualized Return", axis=alt.Axis(format=".2%")),
@@ -219,8 +220,7 @@ if submitted:
         st.altair_chart(chart_returns, use_container_width=True)
     else:
         # Melt the contract metric columns.
-        metrics_df = forecast_df[["Date_dt", "Contract Value", "Investor Cap", "Settlement Value"]]
-        metrics_df = metrics_df.melt("Date_dt", var_name="Metric", value_name="Value")
+        metrics_df = forecast_df[["Date_dt", "Contract Value", "Investor Cap", "Settlement Value"]].melt("Date_dt", var_name="Metric", value_name="Value")
         chart_metrics = alt.Chart(metrics_df).mark_line().encode(
             x=alt.X("Date_dt:T", title="Date"),
             y=alt.Y("Value:Q", title="Value ($)", axis=alt.Axis(format="$,s")),
