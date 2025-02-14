@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import datetime
+import altair as alt
 
 def calculate_forecast(home_value, appreciation, origination_date, months=120):
     """
@@ -157,10 +158,9 @@ if submitted:
     for i in range(target_month_acq + 1, target_month_disp + 1):
         months_held = i - target_month_acq
         forecast_df.loc[i, "First Investor Return"] = (forecast_df.loc[i, "Disposition (Value)"] / acq_invest) ** (12 / months_held) - 1
-
+    
     # Add new column for Second Investor Return.
     # Second Investor Return = ((Settlement Value_i / (Disposition (Investment)_target))^(12 / (i - target_month_disp))) - 1
-    # Here, the acquisition price for the second investor is the first investor’s disposition investment.
     forecast_df["Second Investor Return"] = np.nan  # initialize with NaN
     second_acq = forecast_df.loc[target_month_disp, "Disposition (Investment)"]
     for i in range(target_month_disp + 1, forecast_df.index[-1] + 1):
