@@ -190,7 +190,7 @@ if "forecast_df" in st.session_state:
             ]
         ).properties(height=400)
         # Configure legend at the top.
-        chart_returns = chart_returns.configure_legend(orient='top').configure_axisY(labelPadding=-50, titlePadding=20)
+        chart_returns = chart_returns.configure_legend(orient='top').configure_view(margin={"left": 100})
         st.altair_chart(chart_returns, use_container_width=True)
     else:
         metrics_df = forecast_df_reset[["Month", "Date", "Contract Value", "Investor Cap", "Settlement Value"]].melt(
