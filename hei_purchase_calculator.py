@@ -1,65 +1,84 @@
 import streamlit as st
 import pandas as pd
+import numpy as np
+import plotly.graph_objects as go
 
-st.title("Home Equity Investment (HEI) Calculator")
+# Function to calculate values
+def calculate_hei(home_value, appreciation_rate, premium_percentage, hei_multiplier, investor_cap):
+    years = np.arange(0, 11)
+    home_values = [home_value * ((1 + appreciation_rate)**year) for year in years]
+    premium_amount = home_value * premium_percentage
+    investor_percentage = premium_percentage * hei_multiplier
+    hei_caps = [premium_amount * ((1 + investor_cap)**year) for year in years]
+    hei_intrinsic_values = [hv * investor_percentage for hv in home_values]
+    settlement_values = [min(cap, intrinsic) for cap, intrinsic in zip(hei_caps, hei_intrinsic_values)]
 
-# Input fields
-home_value = st.number_input("Home Value ($)", value=1000000, step=5000, format="%d")
-home_price_appreciation = st.number_input("Home Price Appreciation (%)", value=2.0, step=0.1, format="%.2f") / 100
-premium_percentage = st.number_input("Premium Percentage (%)", value=20.0, step=0.1) / 100
-hei_multiplier = st.number_input("HEI Multiplier", value=2.0, step=0.1)
-investor_cap = st.number_input("Investor Cap (%)", value=20.0, step=0.1) / 100
-
-# Initial calculations
-premium_amount = home_value * premium_percentage
-investor_percentage = premium_percentage * hei_multiplier
-
-st.markdown(f"**Premium Amount:** ${premium_amount:,.2f}")
-st.markdown(f"**Investor Percentage:** {(investor_percentage := premium_percentage * hei_multiplier) * 100:.2f}%")
-
-# Data calculation
-years = list(range(11))
-data = []
-current_home_value = home_value
-hei_cap = premium_amount = home_value * premium_percentage
-
-for year in years:
-    hei_intrinsic_value = investor_percentage * current_home_value
-    settlement_value = min(hei_cap, hei_intrinsic_value := investor_percentage * current_home_value)
-
-    data.append({
-        'Year': year,
-        'Home Value': round(current_home_value, 2),
-        'HEI Cap': round(hei_cap, 2),
-        'HEI Intrinsic Value': round(hei_intrinsic_value := investor_percentage * current_home_value, 2),
-        'Settlement Value': round(settlement_value, 2)
+    df = pd.DataFrame({
+        "Year": years,
+        "Home Value": home_values,
+        "HEI Cap": hei_caps,
+        "HEI Intrinsic Value": hei_intrinsic_values,
+        "Settlement Value": settlement_values
     })
 
-    hei_cap *= (1 + investor_cap)
-    current_home_value *= (1 + (home_price_appreciation))
+    return premium_amount, investor_percentage, df
 
-# Create and style dataframe
-df = pd.DataFrame(data)
+# Streamlit Page Configuration
+st.set_page_config(page_title="HEI Calculator", layout="wide")
 
-def highlight_values(row):
-    highlight = 'background-color: #90ee90;'
-    return [
-        '',
-        '',
-        highlight if (highlight := 'background-color: #90ee90;' if row['HEI Cap'] < row['HEI Intrinsic Value'] else '') else '',
-        highlight if (highlight := 'background-color: #90ee90;' if row['HEI Intrinsic Value'] <= row['HEI Cap'] else '') else '',
-        ''
-    ]
+# Title
+st.title("🏠 Home Equity Investment (HEI) Calculator")
 
-st.dataframe(pd.DataFrame(data).style.apply(highlight, axis=1))
+# Sidebar Inputs
+with st.sidebar:
+    st.header("🔧 Calculator Inputs")
 
-# Chart
-chart_df = pd.DataFrame({
-    'Year': years,
-    'Home Value': df_home := df['Home Value'],
-    'HEI Cap': df_cap := df['HEI Cap'],
-    'HEI Intrinsic Value': df_intrinsic := df['HEI Intrinsic Value'],
-    'Settlement Value': df_settlement := df['Settlement Value']
-}).set_index('Year')
+    home_value = st.number_input("Home Value", value=1_000_000, step=10_000, format="$%d")
+    appreciation_rate = st.number_input("Appreciation Rate (%)", value=2.0, step=0.1, format="%.2f%%") / 100
+    premium_percentage = st.number_input("Premium Percentage (%)", value=20.0, step=1.0, format="%.2f%%") / 100
+    hei_multiplier = st.number_input("HEI Multiplier", value=2.0, step=0.1, format="%.1fx")
+    investor_cap = st.number_input("Investor Cap (%)", value=20.0, step=1.0, format="%.2f%%") / 100
 
-st.line_chart(chart_data.set_index('Year'))
+# Calculations
+premium_amount, investor_percentage, df_results = calculate_hei(
+    home_value, appreciation_rate, premium_percentage, hei_multiplier, investor_cap
+)
+
+# Display Calculated Premium and Investor Percentages
+col1, col2 = st.columns(2)
+
+with col1:
+    st.metric("Premium Amount", f"${premium_amount:,.0f}")
+
+with col2:
+    st.metric("Investor Percentage", f"{investor_percentage:.0%}")
+
+# Plotly Chart (Similar to Chart.js from HTML)
+fig = go.Figure()
+
+fig.add_trace(go.Scatter(x=df_results["Year"], y=df_results["Home Value"], mode='lines+markers', name="Home Value"))
+fig.add_trace(go.Scatter(x=df_results["Year"], y=df_results["HEI Cap"], mode='lines+markers', name="HEI Cap"))
+fig.add_trace(go.Scatter(x=df_results["Year"], y=df_results["HEI Intrinsic Value"], mode='lines+markers', name="HEI Intrinsic Value"))
+fig.add_trace(go.Scatter(x=df_results["Year"], y=df_results["Settlement Value"], mode='lines+markers', name="Settlement Value", fill='tozeroy'))
+
+fig.update_layout(
+    title="HEI Value Over Time",
+    xaxis_title="Year",
+    yaxis_title="Value ($)",
+    hovermode="x unified"
+)
+
+st.plotly_chart(fig, use_container_width=True)
+
+# Display Results Table
+st.subheader("📊 Detailed Annual Breakdown")
+st.dataframe(
+    df_results.style.format({
+        "Home Value": "${:,.0f}",
+        "HEI Cap": "${:,.0f}",
+        "HEI Intrinsic Value": "${:,.0f}",
+        "Settlement Value": "${:,.0f}"
+    }),
+    use_container_width=True,
+    hide_index=True
+)
